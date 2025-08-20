@@ -6,722 +6,22 @@
     <title>ForestApp Pro - Rilevamento Forestale</title>
     
     <!-- PWA Meta Tags -->
+    <meta name="description" content="Applicazione PWA per rilevamenti forestali professionali con aree di saggio e piedilista">
     <meta name="theme-color" content="#16a34a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ForestApp Pro">
+    <link rel="manifest" href="manifest.json">
     
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #16a34a;
-            --primary-dark: #15803d;
-            --secondary: #059669;
-            --error: #dc2626;
-            --warning: #d97706;
-            --info: #2563eb;
-            --success: #16a34a;
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border: #e2e8f0;
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            color: var(--text-primary);
-            min-height: 100vh;
-            line-height: 1.6;
-        }
-
-        .app-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        /* Header */
-        .header {
-            background: var(--bg-secondary);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            box-shadow: var(--shadow-lg);
-            border-left: 4px solid var(--primary);
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .app-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex: 1;
-        }
-
-        .app-icon {
-            width: 2.5rem;
-            height: 2.5rem;
-            background: var(--primary);
-            border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.25rem;
-        }
-
-        .app-title h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .app-title .subtitle {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .status-bar {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 0.75rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .status-online {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-offline {
-            background: #fef2f2;
-            color: #991b1b;
-        }
-
-        /* Tab Navigation */
-        .tab-navigation {
-            display: flex;
-            background: var(--bg-secondary);
-            border-radius: 1rem;
-            padding: 0.5rem;
-            margin-bottom: 1rem;
-            box-shadow: var(--shadow);
-            gap: 0.5rem;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 1rem;
-            border: none;
-            border-radius: 0.75rem;
-            background: transparent;
-            color: var(--text-secondary);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            font-size: 0.95rem;
-        }
-
-        .tab-btn.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: var(--shadow);
-        }
-
-        .tab-btn:hover:not(.active) {
-            background: #f8fafc;
-            color: var(--text-primary);
-        }
-
-        /* Tab Content */
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .stat-card {
-            background: var(--bg-secondary);
-            padding: 1rem;
-            border-radius: 0.75rem;
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        /* Card */
-        .card {
-            background: var(--bg-secondary);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            margin-bottom: 1rem;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        /* Area Selection */
-        .area-selector {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .area-input {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: #f0f9ff;
-            border-radius: 0.75rem;
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .area-input label {
-            font-weight: 600;
-            color: var(--text-primary);
-            white-space: nowrap;
-        }
-
-        .area-input input, 
-        .area-input select {
-            flex: 1;
-            padding: 0.5rem;
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            font-size: 1rem;
-        }
-
-        .area-input input:focus,
-        .area-input select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgb(22 163 74 / 0.1);
-        }
-
-        /* Species Selection */
-        .species-selector {
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-            border-radius: 1rem;
-            border: 2px solid var(--primary);
-        }
-
-        .species-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .species-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
-        }
-
-        .species-btn {
-            padding: 1rem;
-            border: 2px solid var(--border);
-            border-radius: 0.75rem;
-            background: white;
-            cursor: pointer;
-            text-align: center;
-            font-weight: 500;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-        }
-
-        .species-btn:hover {
-            border-color: var(--primary);
-            background: #f0fdf4;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        .species-btn.selected {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .species-icon {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-
-        /* Diameter Classes */
-        .diameter-classes {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .diameter-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem;
-            background: #f8fafc;
-            border-radius: 0.75rem;
-            border: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .diameter-row:hover {
-            border-color: var(--primary);
-            background: #f0fdf4;
-        }
-
-        .diameter-info {
-            flex: 1;
-        }
-
-        .diameter-label {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-
-        .diameter-range {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        .add-tree-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .add-tree-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .add-tree-btn:disabled {
-            background: #d1d5db;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* Height Classes */
-        .height-classes {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .height-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.875rem;
-            background: #f0f9ff;
-            border-radius: 0.75rem;
-            border: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .height-row:hover {
-            border-color: var(--info);
-            background: #dbeafe;
-        }
-
-        .height-info {
-            flex: 1;
-        }
-
-        .height-label {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 0.95rem;
-        }
-
-        .height-range {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        .add-height-btn {
-            background: var(--info);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .add-height-btn:hover {
-            background: #1d4ed8;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .add-height-btn:disabled {
-            background: #d1d5db;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* Height Averages Display */
-        .height-averages {
-            background: #f0f9ff;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-
-        .height-averages h4 {
-            color: var(--info);
-            margin-bottom: 0.75rem;
-            font-size: 1rem;
-        }
-
-        .avg-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .avg-item:last-child {
-            border-bottom: none;
-        }
-
-        .avg-species {
-            font-weight: 500;
-        }
-
-        .avg-height {
-            font-weight: 600;
-            color: var(--info);
-        }
-
-        /* Recent entries */
-        .recent-entries {
-            max-height: 350px;
-            overflow-y: auto;
-        }
-
-        .entry-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            transition: background 0.2s;
-        }
-
-        .entry-item:hover {
-            background: #f8fafc;
-        }
-
-        .entry-info {
-            flex: 1;
-        }
-
-        .entry-species {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .entry-details {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        .entry-timestamp {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .delete-btn {
-            background: var(--error);
-            color: white;
-            border: none;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.875rem;
-        }
-
-        .delete-btn:hover {
-            background: #b91c1c;
-            transform: scale(1.05);
-        }
-
-        /* Actions */
-        .actions {
-            display: grid;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-        }
-
-        .btn {
-            padding: 0.875rem 1.5rem;
-            border: none;
-            border-radius: 0.75rem;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: #f8fafc;
-            transform: translateY(-1px);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Volume Warning */
-        .volume-warning {
-            background: #fef3c7;
-            border: 2px solid #f59e0b;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            text-align: center;
-        }
-
-        .volume-warning h4 {
-            color: #92400e;
-            margin-bottom: 0.5rem;
-        }
-
-        .volume-warning p {
-            color: #78350f;
-            font-size: 0.9rem;
-        }
-
-        /* Notifications */
-        .notification {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            padding: 1rem 1.5rem;
-            border-radius: 0.75rem;
-            color: white;
-            font-weight: 500;
-            z-index: 1000;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            max-width: 300px;
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            background: var(--success);
-        }
-
-        .notification.error {
-            background: var(--error);
-        }
-
-        .notification.info {
-            background: var(--info);
-        }
-
-        /* Loading */
-        .loading {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .app-container {
-                padding: 0.5rem;
-            }
-            
-            .header {
-                padding: 1rem;
-            }
-            
-            .header-top {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .species-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .tab-btn {
-                font-size: 0.85rem;
-                padding: 0.875rem;
-            }
-        }
-
-        /* Config Alert */
-        .config-alert {
-            background: #fef2f2;
-            border: 2px solid #ef4444;
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .config-alert h3 {
-            color: #dc2626;
-            font-size: 1.25rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .config-alert p {
-            color: #7f1d1d;
-            margin-bottom: 1rem;
-        }
-
-        .config-alert code {
-            background: #fee2e2;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-family: monospace;
-            color: #991b1b;
-        }
-    </style>
+    <!-- Apple PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ForestApp Pro">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/icon-16x16.png">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="app-container">
@@ -732,1765 +32,6 @@
             <p>Cerca questa riga: <code>const GOOGLE_APPS_SCRIPT_URL = 'IL_TUO_URL_QUI';</code></p>
             <p>E sostituiscila con il tuo URL vero di Google Apps Script.</p>
         </div>
-
-        <!-- Inventory Tab -->
-        <div id="inventory" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        📊 Piedilista
-                    </h2>
-                    <button class="btn btn-secondary" onclick="clearInventoryData()">
-                        🗑️ Pulisci Piedilista
-                    </button>
-                </div>
-
-                <!-- Area Input -->
-                <div class="area-selector">
-                    <div class="area-input">
-                        <label for="inventoryAreaHa">Area di riferimento (ha):</label>
-                        <input type="number" id="inventoryAreaHa" step="0.1" min="0.1" max="1000" value="30.0" onchange="updateInventoryArea()">
-                    </div>
-                </div>
-
-                <!-- Volume Warning -->
-                <div class="volume-warning" id="volumeWarning" style="display: none;">
-                    <h4>⚠️ Altezze Mancanti</h4>
-                    <p>Alcune specie non hanno altezze medie dalle aree di saggio. I volumi non verranno calcolati fino a quando non avrai dati sufficienti o inserisci manualmente le altezze medie.</p>
-                </div>
-
-                <!-- Species Selection -->
-                <div class="species-selector">
-                    <div class="species-title">🌲 Seleziona Specie per Piedilista</div>
-                    <div class="species-grid">
-                        <button class="species-btn" data-species="pino-domestico" onclick="selectSpeciesForInventory('pino-domestico')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino Domestico</div>
-                            <div id="height-status-pino-domestico" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                        <button class="species-btn" data-species="pino-marittimo" onclick="selectSpeciesForInventory('pino-marittimo')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino Marittimo</div>
-                            <div id="height-status-pino-marittimo" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                        <button class="species-btn" data-species="pino-aleppo" onclick="selectSpeciesForInventory('pino-aleppo')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino d'Aleppo</div>
-                            <div id="height-status-pino-aleppo" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                        <button class="species-btn" data-species="cipresso" onclick="selectSpeciesForInventory('cipresso')">
-                            <span class="species-icon">🌲</span>
-                            <div>Cipresso Comune</div>
-                            <div id="height-status-cipresso" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                        <button class="species-btn" data-species="altro" onclick="selectSpeciesForInventory('altro')">
-                            <span class="species-icon">❓</span>
-                            <div>Altro</div>
-                            <div id="height-status-altro" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Diameter Classes for Inventory -->
-                <div class="diameter-classes">
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 5 cm</div>
-                            <div class="diameter-range">Range: 2.5 - 7.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(5)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 10 cm</div>
-                            <div class="diameter-range">Range: 7.6 - 12.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(10)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 15 cm</div>
-                            <div class="diameter-range">Range: 12.6 - 17.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(15)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 20 cm</div>
-                            <div class="diameter-range">Range: 17.6 - 22.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(20)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 25 cm</div>
-                            <div class="diameter-range">Range: 22.6 - 27.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(25)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 30 cm</div>
-                            <div class="diameter-range">Range: 27.6 - 32.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(30)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 35 cm</div>
-                            <div class="diameter-range">Range: 32.6 - 37.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(35)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 40+ cm</div>
-                            <div class="diameter-range">Range: > 37.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(40)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Recent Inventory Trees -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            📝 Piedilista Recente
-                        </h2>
-                        <span id="inventoryTreeCount" class="stat-value" style="font-size: 1rem;">0 piante</span>
-                    </div>
-                    
-                    <div class="recent-entries" id="recentInventoryTrees">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Nessuna pianta del piedilista rilevata ancora.<br>
-                            Seleziona una specie e inizia il conteggio!
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Results Tab -->
-        <div id="results" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        📈 Risultati e Statistiche
-                    </h2>
-                </div>
-
-                <!-- Summary Stats -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalAreaHa">30.0 ha</div>
-                        <div class="stat-label">Area Totale</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="treesPerHaResult">0</div>
-                        <div class="stat-label">Piante/Ha</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="basalAreaHa">0.0 m²/ha</div>
-                        <div class="stat-label">Area Basim./Ha</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="volumeHa">0.0 m³/ha</div>
-                        <div class="stat-label">Volume/Ha</div>
-                    </div>
-                </div>
-
-                <!-- Species Analysis -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            🌲 Analisi per Specie
-                        </h2>
-                    </div>
-                    
-                    <div id="speciesAnalysis">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Nessun dato da analizzare ancora
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Height Analysis -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            📏 Analisi Altezze Medie
-                        </h2>
-                    </div>
-                    
-                    <div id="heightAnalysis">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Nessuna area di saggio rilevata ancora
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="actions">
-                    <button id="saveBtn" class="btn btn-primary" onclick="saveAllData()">
-                        <span id="saveIcon">💾</span>
-                        <span id="saveText">Salva tutto su Google Sheets</span>
-                    </button>
-                    
-                    <button class="btn btn-secondary" onclick="exportAllData()">
-                        📄 Esporta CSV Completo
-                    </button>
-                    
-                    <button class="btn btn-secondary" onclick="generateReport()">
-                        📊 Genera Report Completo
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notification Container -->
-    <div id="notifications"></div>
-
-    <script>
-        // ⚠️ ⚠️ ⚠️ SOSTITUISCI QUESTO URL CON IL TUO GOOGLE APPS SCRIPT URL ⚠️ ⚠️ ⚠️
-        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNuHQtZdmne2vvcm_AR18kSesQVemwnElm_XhhTymKTBxZclC1NtAns7KVv4xgfRcLQw/exec';
-
-        // App State - Gestione centralizzata dello stato dell'applicazione
-        let appState = {
-            isOnline: navigator.onLine,
-            operatorName: '',
-            currentSampleArea: 'area1',
-            selectedSpeciesForHeight: null,
-            selectedSpeciesForInventory: null,
-            inventoryAreaHa: 30.0,
-            
-            // Current tree being measured in sample area
-            currentSampleTree: null, // { species, diameterClass, needsHeight: true }
-            
-            // Sample areas data structure
-            sampleAreas: {
-                area1: { completeTrees: [] },
-                area2: { completeTrees: [] },
-                area3: { completeTrees: [] },
-                area4: { completeTrees: [] },
-                area5: { completeTrees: [] }
-            },
-            
-            // Inventory trees (piedilista)
-            inventoryTrees: [],
-            
-            // Calculated averages
-            speciesHeightAverages: {},
-            
-            gpsLocation: null,
-            lastSync: null
-        };
-
-        // Species Configuration - Parametri dendrometrici per specie
-        const SPECIES_CONFIG = {
-            'pino-domestico': {
-                name: 'Pino Domestico',
-                scientific: 'Pinus pinea',
-                formFactor: 0.45
-            },
-            'pino-marittimo': {
-                name: 'Pino Marittimo',
-                scientific: 'Pinus pinaster',
-                formFactor: 0.42
-            },
-            'pino-aleppo': {
-                name: "Pino d'Aleppo",
-                scientific: 'Pinus halepensis',
-                formFactor: 0.40
-            },
-            'cipresso': {
-                name: 'Cipresso Comune',
-                scientific: 'Cupressus sempervirens',
-                formFactor: 0.48
-            },
-            'altro': {
-                name: 'Altro',
-                scientific: 'Altre specie',
-                formFactor: 0.45
-            }
-        };
-
-        // Initialize App
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeApp();
-            setupEventListeners();
-            loadStoredData();
-            startGeoLocation();
-            setupOfflineDetection();
-            
-            // Get operator name
-            if (!appState.operatorName) {
-                appState.operatorName = prompt('Inserisci il tuo nome:') || 'Operatore';
-            }
-            
-            // Check if URL is configured
-            if (GOOGLE_APPS_SCRIPT_URL === 'IL_TUO_URL_QUI') {
-                document.getElementById('configAlert').style.display = 'block';
-            } else {
-                document.getElementById('configAlert').style.display = 'none';
-            }
-            
-            updateAllUI();
-        });
-
-        // Tab Switching - Gestione navigazione tra tab
-        function switchTab(tabName) {
-            // Hide all tab contents
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Remove active class from all tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Show selected tab content
-            document.getElementById(tabName).classList.add('active');
-            
-            // Add active class to clicked button
-            event.target.classList.add('active');
-            
-            // Update UI based on current tab
-            updateAllUI();
-        }
-
-        // Sample Area Functions - Gestione aree di saggio
-        function selectSampleArea(areaId) {
-            appState.currentSampleArea = areaId;
-            document.getElementById('currentArea').textContent = `Area ${areaId.slice(-1)}`;
-            updateSampleAreaUI();
-            saveToLocalStorage();
-        }
-
-        function selectSpeciesForHeight(species) {
-            appState.selectedSpeciesForHeight = species;
-            
-            // Reset current tree measurement
-            appState.currentSampleTree = null;
-            
-            // Update UI for sample area
-            document.querySelectorAll('#sample-area .species-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            document.querySelector(`#sample-area [data-species="${species}"]`).classList.add('selected');
-            
-            // Enable diameter buttons, disable height buttons until diameter is selected
-            document.querySelectorAll('#sample-area .add-tree-btn').forEach(btn => {
-                btn.disabled = false;
-            });
-            
-            document.querySelectorAll('#sample-area .add-height-btn').forEach(btn => {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-            });
-            
-            updateSampleAreaStatus();
-            saveToLocalStorage();
-            showNotification(`Specie selezionata: ${SPECIES_CONFIG[species].name}. Ora seleziona il diametro.`, 'info');
-        }
-
-        function addSampleTree(diameterClass) {
-            if (!appState.selectedSpeciesForHeight) {
-                showNotification('Seleziona prima una specie!', 'error');
-                return;
-            }
-
-            // Create a new tree measurement in progress
-            appState.currentSampleTree = {
-                id: Date.now() + Math.random(),
-                area: appState.currentSampleArea,
-                species: appState.selectedSpeciesForHeight,
-                diameterClass: diameterClass,
-                height: null,
-                needsHeight: true,
-                timestamp: new Date().toISOString(),
-                operator: appState.operatorName,
-                gps: appState.gpsLocation ? {
-                    lat: appState.gpsLocation.latitude,
-                    lng: appState.gpsLocation.longitude,
-                    accuracy: appState.gpsLocation.accuracy
-                } : null
-            };
-
-            // Disable diameter buttons and enable height buttons
-            document.querySelectorAll('#sample-area .add-tree-btn').forEach(btn => {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-            });
-            
-            document.querySelectorAll('#sample-area .add-height-btn').forEach(btn => {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.innerHTML = `<span>📏</span><span>Altezza per Ø${diameterClass}cm</span>`;
-            });
-
-            updateSampleAreaStatus();
-            
-            const speciesName = SPECIES_CONFIG[appState.selectedSpeciesForHeight].name;
-            showNotification(`Diametro ${diameterClass}cm registrato per ${speciesName}. Ora misura l'altezza.`, 'info');
-        }
-
-        function addHeightMeasurement(height) {
-            if (!appState.currentSampleTree) {
-                showNotification('Seleziona prima il diametro di una pianta!', 'error');
-                return;
-            }
-
-            // Complete the tree measurement
-            appState.currentSampleTree.height = height;
-            appState.currentSampleTree.needsHeight = false;
-            appState.currentSampleTree.heightTimestamp = new Date().toISOString();
-
-            // Add to complete trees
-            appState.sampleAreas[appState.currentSampleArea].completeTrees.push(appState.currentSampleTree);
-
-            // Reset current tree
-            appState.currentSampleTree = null;
-
-            // Re-enable diameter buttons for next tree
-            document.querySelectorAll('#sample-area .add-tree-btn').forEach(btn => {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-            });
-
-            // Disable height buttons until next diameter
-            document.querySelectorAll('#sample-area .add-height-btn').forEach(btn => {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                btn.innerHTML = `<span>📏</span><span>Altezza</span>`;
-            });
-
-            // Recalculate averages
-            calculateSpeciesHeightAverages();
-            updateSampleAreaUI();
-            updateInventoryUI();
-            saveToLocalStorage();
-            
-            const speciesName = SPECIES_CONFIG[appState.selectedSpeciesForHeight].name;
-            showNotification(`✅ Pianta completa: ${speciesName} Ø${appState.sampleAreas[appState.currentSampleArea].completeTrees.slice(-1)[0].diameterClass}cm H${height}m`, 'success');
-        }
-
-        // Update sample area status display
-        function updateSampleAreaStatus() {
-            const statusDiv = document.getElementById('sampleAreaStatus') || createSampleAreaStatus();
-            
-            if (appState.currentSampleTree) {
-                statusDiv.innerHTML = `
-                    <div style="background: #fef3c7; padding: 1rem; border-radius: 0.75rem; border: 2px solid #f59e0b; margin: 1rem 0;">
-                        <h4 style="color: #92400e; margin-bottom: 0.5rem;">🌲 Pianta in Misurazione</h4>
-                        <p style="color: #78350f;">
-                            <strong>${SPECIES_CONFIG[appState.currentSampleTree.species].name}</strong><br>
-                            Diametro: ${appState.currentSampleTree.diameterClass}cm<br>
-                            <strong>⏳ Aspettando misurazione altezza...</strong>
-                        </p>
-                    </div>
-                `;
-            } else {
-                statusDiv.innerHTML = `
-                    <div style="background: #f0fdf4; padding: 1rem; border-radius: 0.75rem; border: 2px solid #16a34a; margin: 1rem 0;">
-                        <h4 style="color: #15803d; margin-bottom: 0.5rem;">✅ Pronto per Nuova Pianta</h4>
-                        <p style="color: #166534;">
-                            ${appState.selectedSpeciesForHeight ? 
-                                `Specie selezionata: <strong>${SPECIES_CONFIG[appState.selectedSpeciesForHeight].name}</strong><br>Clicca su una classe diametrica per iniziare` :
-                                'Seleziona una specie per iniziare il rilevamento'
-                            }
-                        </p>
-                    </div>
-                `;
-            }
-        }
-
-        function createSampleAreaStatus() {
-            const statusDiv = document.createElement('div');
-            statusDiv.id = 'sampleAreaStatus';
-            
-            // Insert after species selector
-            const speciesSelector = document.querySelector('#sample-area .species-selector');
-            speciesSelector.parentNode.insertBefore(statusDiv, speciesSelector.nextSibling);
-            
-            return statusDiv;
-        }
-
-        // Inventory Functions - Gestione piedilista
-        function selectSpeciesForInventory(species) {
-            appState.selectedSpeciesForInventory = species;
-            
-            // Update UI for inventory
-            document.querySelectorAll('#inventory .species-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            document.querySelector(`#inventory [data-species="${species}"]`).classList.add('selected');
-            
-            // Enable diameter buttons
-            document.querySelectorAll('#inventory .add-tree-btn').forEach(btn => {
-                btn.disabled = false;
-            });
-            
-            saveToLocalStorage();
-            showNotification(`Specie selezionata per piedilista: ${SPECIES_CONFIG[species].name}`, 'info');
-        }
-
-        function addInventoryTree(diameterClass) {
-            if (!appState.selectedSpeciesForInventory) {
-                showNotification('Seleziona prima una specie!', 'error');
-                return;
-            }
-
-            const inventoryTree = {
-                id: Date.now() + Math.random(),
-                species: appState.selectedSpeciesForInventory,
-                diameterClass: diameterClass,
-                timestamp: new Date().toISOString(),
-                gps: appState.gpsLocation ? {
-                    lat: appState.gpsLocation.latitude,
-                    lng: appState.gpsLocation.longitude,
-                    accuracy: appState.gpsLocation.accuracy
-                } : null,
-                operator: appState.operatorName
-            };
-
-            appState.inventoryTrees.push(inventoryTree);
-            updateInventoryUI();
-            updateResultsUI();
-            saveToLocalStorage();
-            
-            const speciesName = SPECIES_CONFIG[appState.selectedSpeciesForInventory].name;
-            showNotification(`Aggiunta al piedilista: ${speciesName} - Classe ${diameterClass}cm`, 'success');
-        }
-
-        function updateInventoryArea() {
-            appState.inventoryAreaHa = parseFloat(document.getElementById('inventoryAreaHa').value);
-            updateInventoryUI();
-            updateResultsUI();
-            saveToLocalStorage();
-        }
-
-        // Calculation Functions - Calcoli dendrometrici
-        function calculateSpeciesHeightAverages() {
-            appState.speciesHeightAverages = {};
-            
-            // Collect all complete trees with heights for each species across all areas
-            const speciesHeights = {};
-            
-            Object.values(appState.sampleAreas).forEach(area => {
-                area.completeTrees.forEach(tree => {
-                    if (tree.height && tree.height > 0) {
-                        if (!speciesHeights[tree.species]) {
-                            speciesHeights[tree.species] = [];
-                        }
-                        speciesHeights[tree.species].push(tree.height);
-                    }
-                });
-            });
-            
-            // Calculate averages
-            Object.entries(speciesHeights).forEach(([species, heights]) => {
-                if (heights.length > 0) {
-                    const average = heights.reduce((sum, height) => sum + height, 0) / heights.length;
-                    appState.speciesHeightAverages[species] = {
-                        average: average,
-                        count: heights.length,
-                        min: Math.min(...heights),
-                        max: Math.max(...heights)
-                    };
-                }
-            });
-        }
-
-        function calculateTreeBasalArea(diameterClass) {
-            const diameter = diameterClass;
-            return Math.PI * Math.pow(diameter / 200, 2);
-        }
-
-        function calculateTreeVolume(species, diameterClass) {
-            const basalArea = calculateTreeBasalArea(diameterClass);
-            const speciesConfig = SPECIES_CONFIG[species];
-            
-            // Use calculated average height if available, otherwise return 0
-            if (appState.speciesHeightAverages[species]) {
-                const avgHeight = appState.speciesHeightAverages[species].average;
-                return basalArea * avgHeight * speciesConfig.formFactor;
-            }
-            
-            return 0; // No volume calculation without height data
-        }
-
-        function calculateSampleTreeVolume(species, diameterClass, height) {
-            const basalArea = calculateTreeBasalArea(diameterClass);
-            const speciesConfig = SPECIES_CONFIG[species];
-            return basalArea * height * speciesConfig.formFactor;
-        }
-
-        function getTotalVolume() {
-            return appState.inventoryTrees.reduce((total, tree) => {
-                return total + calculateTreeVolume(tree.species, tree.diameterClass);
-            }, 0);
-        }
-
-        function getTotalBasalArea() {
-            return appState.inventoryTrees.reduce((total, tree) => {
-                return total + calculateTreeBasalArea(tree.diameterClass);
-            }, 0);
-        }
-
-        // UI Update Functions - Aggiornamenti interfaccia utente
-        function updateAllUI() {
-            updateHeaderStats();
-            updateSampleAreaUI();
-            updateInventoryUI();
-            updateResultsUI();
-        }
-
-        function updateHeaderStats() {
-            const allCompleteTrees = Object.values(appState.sampleAreas).reduce((total, area) => {
-                return total + area.completeTrees.length;
-            }, 0);
-            
-            const speciesWithHeights = Object.keys(appState.speciesHeightAverages).length;
-            const totalVolume = getTotalVolume();
-            
-            document.getElementById('totalSampleTrees').textContent = allCompleteTrees;
-            document.getElementById('totalInventoryTrees').textContent = appState.inventoryTrees.length;
-            document.getElementById('speciesWithHeights').textContent = `${speciesWithHeights}/5`;
-            document.getElementById('totalVolume').textContent = totalVolume.toFixed(1) + ' m³';
-        }
-
-        function updateSampleAreaUI() {
-            const currentArea = appState.sampleAreas[appState.currentSampleArea];
-            
-            // Update sample tree count
-            document.getElementById('sampleTreeCount').textContent = 
-                `${currentArea.completeTrees.length} pianta${currentArea.completeTrees.length !== 1 ? 'e' : ''} completa${currentArea.completeTrees.length !== 1 ? 'e' : ''}`;
-            
-            // Update recent sample trees
-            updateRecentSampleTrees(currentArea.completeTrees);
-            
-            // Update height averages display
-            updateHeightAveragesDisplay();
-            
-            // Update status
-            updateSampleAreaStatus();
-        }
-
-        function updateRecentSampleTrees(completeTrees) {
-            const container = document.getElementById('recentSampleTrees');
-            
-            if (completeTrees.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                        Nessuna pianta completa rilevata ancora.<br>
-                        Seleziona una specie e completa diametro + altezza per la prima pianta!
-                    </div>
-                `;
-                return;
-            }
-
-            const recentTrees = completeTrees.slice(-20).reverse();
-            
-            const treesHTML = recentTrees.map(tree => {
-                const speciesConfig = SPECIES_CONFIG[tree.species];
-                const timestamp = new Date(tree.timestamp);
-                const gpsText = tree.gps ? 
-                    `GPS: ${tree.gps.lat.toFixed(4)}, ${tree.gps.lng.toFixed(4)}` : 
-                    'GPS non disponibile';
-                
-                const basalArea = calculateTreeBasalArea(tree.diameterClass);
-                const volume = calculateSampleTreeVolume(tree.species, tree.diameterClass, tree.height);
-                
-                return `
-                    <div class="entry-item">
-                        <div class="entry-info">
-                            <div class="entry-species">${speciesConfig.name}</div>
-                            <div class="entry-details">
-                                Ø${tree.diameterClass}cm × H${tree.height}m • ${tree.area.toUpperCase()}<br>
-                                Area basim.: ${basalArea.toFixed(4)} m² • Volume: ${volume.toFixed(3)} m³<br>
-                                <small>${gpsText}</small>
-                            </div>
-                            <div class="entry-timestamp">
-                                ${timestamp.toLocaleString()}
-                            </div>
-                        </div>
-                        <button class="delete-btn" onclick="deleteSampleTree('${tree.id}')">
-                            🗑️
-                        </button>
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = treesHTML;
-        }
-
-        function updateHeightAveragesDisplay() {
-            const container = document.getElementById('averagesList');
-            
-            if (Object.keys(appState.speciesHeightAverages).length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Nessuna altezza rilevata ancora</p>';
-                return;
-            }
-            
-            const averagesHTML = Object.entries(appState.speciesHeightAverages).map(([species, data]) => {
-                const speciesConfig = SPECIES_CONFIG[species];
-                return `
-                    <div class="avg-item">
-                        <div class="avg-species">${speciesConfig.name}</div>
-                        <div class="avg-height">
-                            ${data.average.toFixed(1)}m 
-                            <small style="color: var(--text-secondary);">(${data.count} campioni)</small>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            container.innerHTML = averagesHTML;
-        }
-
-        function updateInventoryUI() {
-            // Update inventory tree count
-            document.getElementById('inventoryTreeCount').textContent = 
-                `${appState.inventoryTrees.length} pianta${appState.inventoryTrees.length !== 1 ? 'e' : ''}`;
-            
-            // Update recent inventory trees
-            updateRecentInventoryTrees();
-            
-            // Update height status for each species button
-            updateSpeciesHeightStatus();
-            
-            // Check if volume warning should be shown
-            updateVolumeWarning();
-        }
-
-        function updateRecentInventoryTrees() {
-            const container = document.getElementById('recentInventoryTrees');
-            
-            if (appState.inventoryTrees.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                        Nessuna pianta del piedilista rilevata ancora.<br>
-                        Seleziona una specie e inizia il conteggio!
-                    </div>
-                `;
-                return;
-            }
-
-            const recentTrees = appState.inventoryTrees.slice(-20).reverse();
-            
-            const treesHTML = recentTrees.map(tree => {
-                const speciesConfig = SPECIES_CONFIG[tree.species];
-                const timestamp = new Date(tree.timestamp);
-                const gpsText = tree.gps ? 
-                    `GPS: ${tree.gps.lat.toFixed(4)}, ${tree.gps.lng.toFixed(4)}` : 
-                    'GPS non disponibile';
-                
-                const volume = calculateTreeVolume(tree.species, tree.diameterClass);
-                const volumeText = volume > 0 ? `Vol: ${volume.toFixed(3)} m³` : 'Vol: N/A (no altezza)';
-                
-                return `
-                    <div class="entry-item">
-                        <div class="entry-info">
-                            <div class="entry-species">${speciesConfig.name}</div>
-                            <div class="entry-details">
-                                Classe ${tree.diameterClass}cm • ${volumeText} • ${gpsText}
-                            </div>
-                            <div class="entry-timestamp">
-                                ${timestamp.toLocaleString()}
-                            </div>
-                        </div>
-                        <button class="delete-btn" onclick="deleteInventoryTree('${tree.id}')">
-                            🗑️
-                        </button>
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = treesHTML;
-        }
-
-        function updateSpeciesHeightStatus() {
-            Object.keys(SPECIES_CONFIG).forEach(species => {
-                const statusElement = document.getElementById(`height-status-${species}`);
-                if (statusElement) {
-                    if (appState.speciesHeightAverages[species]) {
-                        const avg = appState.speciesHeightAverages[species].average;
-                        statusElement.textContent = `✅ H: ${avg.toFixed(1)}m`;
-                        statusElement.style.color = '#16a34a';
-                    } else {
-                        statusElement.textContent = '⚠️ No altezza';
-                        statusElement.style.color = '#d97706';
-                    }
-                }
-            });
-        }
-
-        function updateVolumeWarning() {
-            const warningElement = document.getElementById('volumeWarning');
-            
-            // Check if there are inventory trees without height data
-            const speciesInInventory = [...new Set(appState.inventoryTrees.map(tree => tree.species))];
-            const speciesWithoutHeights = speciesInInventory.filter(species => 
-                !appState.speciesHeightAverages[species]
-            );
-            
-            if (speciesWithoutHeights.length > 0 && appState.inventoryTrees.length > 0) {
-                warningElement.style.display = 'block';
-            } else {
-                warningElement.style.display = 'none';
-            }
-        }
-
-        function updateResultsUI() {
-            const totalArea = appState.inventoryAreaHa;
-            const totalTrees = appState.inventoryTrees.length;
-            const treesPerHa = totalArea > 0 ? Math.round(totalTrees / totalArea) : 0;
-            const totalBasalArea = getTotalBasalArea();
-            const basalAreaHa = totalArea > 0 ? totalBasalArea / totalArea : 0;
-            const totalVolume = getTotalVolume();
-            const volumeHa = totalArea > 0 ? totalVolume / totalArea : 0;
-
-            document.getElementById('totalAreaHa').textContent = totalArea.toFixed(1) + ' ha';
-            document.getElementById('treesPerHaResult').textContent = treesPerHa;
-            document.getElementById('basalAreaHa').textContent = basalAreaHa.toFixed(2) + ' m²/ha';
-            document.getElementById('volumeHa').textContent = volumeHa.toFixed(1) + ' m³/ha';
-
-            updateSpeciesAnalysis();
-            updateHeightAnalysis();
-        }
-
-        function updateSpeciesAnalysis() {
-            const container = document.getElementById('speciesAnalysis');
-            
-            if (appState.inventoryTrees.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nessun dato da analizzare ancora</div>';
-                return;
-            }
-
-            // Calculate species statistics
-            const speciesStats = {};
-            appState.inventoryTrees.forEach(tree => {
-                if (!speciesStats[tree.species]) {
-                    speciesStats[tree.species] = {
-                        count: 0,
-                        basalArea: 0,
-                        volume: 0,
-                        diameterClasses: {}
-                    };
-                }
-                speciesStats[tree.species].count++;
-                speciesStats[tree.species].basalArea += calculateTreeBasalArea(tree.diameterClass);
-                speciesStats[tree.species].volume += calculateTreeVolume(tree.species, tree.diameterClass);
-                
-                if (!speciesStats[tree.species].diameterClasses[tree.diameterClass]) {
-                    speciesStats[tree.species].diameterClasses[tree.diameterClass] = 0;
-                }
-                speciesStats[tree.species].diameterClasses[tree.diameterClass]++;
-            });
-
-            const analysisHTML = Object.entries(speciesStats).map(([species, stats]) => {
-                const speciesConfig = SPECIES_CONFIG[species];
-                const percentage = ((stats.count / appState.inventoryTrees.length) * 100).toFixed(1);
-                const hasHeight = appState.speciesHeightAverages[species] ? '✅' : '⚠️';
-                const avgHeight = appState.speciesHeightAverages[species] ? 
-                    appState.speciesHeightAverages[species].average.toFixed(1) + 'm' : 'N/A';
-                
-                const diameterDistribution = Object.entries(stats.diameterClasses)
-                    .map(([diam, count]) => `${count}×${diam}cm`)
-                    .join(', ');
-                
-                return `
-                    <div class="entry-item">
-                        <div class="entry-info">
-                            <div class="entry-species">${hasHeight} ${speciesConfig.name}</div>
-                            <div class="entry-details">
-                                ${stats.count} piante (${percentage}%) • H media: ${avgHeight}<br>
-                                Area basim.: ${stats.basalArea.toFixed(2)} m² • Volume: ${stats.volume.toFixed(1)} m³<br>
-                                <small>Distribuzione: ${diameterDistribution}</small>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = analysisHTML;
-        }
-
-        function updateHeightAnalysis() {
-            const container = document.getElementById('heightAnalysis');
-            
-            if (Object.keys(appState.speciesHeightAverages).length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nessuna area di saggio rilevata ancora</div>';
-                return;
-            }
-
-            const analysisHTML = Object.entries(appState.speciesHeightAverages).map(([species, data]) => {
-                const speciesConfig = SPECIES_CONFIG[species];
-                
-                return `
-                    <div class="entry-item">
-                        <div class="entry-info">
-                            <div class="entry-species">${speciesConfig.name}</div>
-                            <div class="entry-details">
-                                Media: ${data.average.toFixed(1)}m • Min: ${data.min.toFixed(1)}m • Max: ${data.max.toFixed(1)}m<br>
-                                Campioni: ${data.count} altezze misurate
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = analysisHTML;
-        }
-
-        // Delete Functions - Gestione eliminazioni
-        function deleteSampleTree(treeId) {
-            if (confirm('Sei sicuro di voler eliminare questa pianta di saggio?')) {
-                Object.values(appState.sampleAreas).forEach(area => {
-                    area.completeTrees = area.completeTrees.filter(tree => tree.id != treeId);
-                });
-                
-                // Recalculate averages after deletion
-                calculateSpeciesHeightAverages();
-                updateSampleAreaUI();
-                updateInventoryUI(); // Update inventory UI as height averages may have changed
-                saveToLocalStorage();
-                showNotification('Pianta di saggio eliminata', 'info');
-            }
-        }
-
-        function deleteInventoryTree(treeId) {
-            if (confirm('Sei sicuro di voler eliminare questa pianta dal piedilista?')) {
-                appState.inventoryTrees = appState.inventoryTrees.filter(tree => tree.id != treeId);
-                updateInventoryUI();
-                updateResultsUI();
-                saveToLocalStorage();
-                showNotification('Pianta eliminata dal piedilista', 'info');
-            }
-        }
-
-        function clearInventoryData() {
-            if (appState.inventoryTrees.length === 0) {
-                showNotification('Nessun dato del piedilista da eliminare', 'info');
-                return;
-            }
-
-            if (confirm(`Sei sicuro di voler eliminare tutte le ${appState.inventoryTrees.length} piante del piedilista?`)) {
-                appState.inventoryTrees = [];
-                appState.selectedSpeciesForInventory = null;
-                
-                // Reset UI
-                document.querySelectorAll('#inventory .species-btn').forEach(btn => {
-                    btn.classList.remove('selected');
-                });
-                document.querySelectorAll('#inventory .add-tree-btn').forEach(btn => {
-                    btn.disabled = true;
-                });
-                
-                updateInventoryUI();
-                updateResultsUI();
-                saveToLocalStorage();
-                showNotification('Tutti i dati del piedilista sono stati eliminati', 'info');
-            }
-        }
-
-        // Save/Load Functions - Gestione dati e sincronizzazione
-        async function saveAllData() {
-            const allCompleteTrees = Object.values(appState.sampleAreas).reduce((total, area) => {
-                return total.concat(area.completeTrees);
-            }, []);
-
-            // Separate the complete trees into sample trees and height measurements for compatibility
-            const sampleTrees = allCompleteTrees.map(tree => ({
-                id: tree.id,
-                area: tree.area,
-                species: tree.species,
-                diameterClass: tree.diameterClass,
-                timestamp: tree.timestamp,
-                operator: tree.operator,
-                gps: tree.gps,
-                synced: tree.synced || false
-            }));
-
-            const heightMeasurements = allCompleteTrees.map(tree => ({
-                id: tree.id + '_height',
-                area: tree.area,
-                species: tree.species,
-                height: tree.height,
-                timestamp: tree.heightTimestamp || tree.timestamp,
-                operator: tree.operator,
-                gps: tree.gps,
-                synced: tree.synced || false
-            }));
-
-            // Identifica solo i dati NON ancora salvati
-            const unsavedSampleTrees = sampleTrees.filter(tree => !tree.synced);
-            const unsavedHeightMeasurements = heightMeasurements.filter(measurement => !measurement.synced);
-            const unsavedInventoryTrees = appState.inventoryTrees.filter(tree => !tree.synced);
-
-            if (unsavedSampleTrees.length === 0 && unsavedInventoryTrees.length === 0 && unsavedHeightMeasurements.length === 0) {
-                showNotification('Tutti i dati sono già sincronizzati!', 'info');
-                return;
-            }
-
-            const saveBtn = document.getElementById('saveBtn');
-            const saveIcon = document.getElementById('saveIcon');
-            const saveText = document.getElementById('saveText');
-
-            // Update UI to show saving
-            saveBtn.disabled = true;
-            saveIcon.innerHTML = '<div class="loading"></div>';
-            saveText.textContent = 'Salvando...';
-
-            try {
-                const dataToSave = {
-                    timestamp: new Date().toISOString(),
-                    operator: appState.operatorName,
-                    inventoryAreaHa: appState.inventoryAreaHa,
-                    totalSampleTrees: unsavedSampleTrees.length,
-                    totalInventoryTrees: unsavedInventoryTrees.length,
-                    totalVolume: getTotalVolume(),
-                    speciesHeightAverages: appState.speciesHeightAverages,
-                    sampleTrees: unsavedSampleTrees,
-                    heightMeasurements: unsavedHeightMeasurements,
-                    inventoryTrees: unsavedInventoryTrees,
-                    completeTrees: allCompleteTrees.filter(tree => !tree.synced),
-                    isIncremental: true
-                };
-
-                console.log('📤 Invio SOLO dati nuovi:', dataToSave);
-
-                if (appState.isOnline && GOOGLE_APPS_SCRIPT_URL !== 'IL_TUO_URL_QUI') {
-                    await saveToGoogleSheets(dataToSave);
-                    
-                    // Marca come sincronizzati SOLO dopo successo
-                    markCompleteTreesAsSynced(allCompleteTrees.filter(tree => !tree.synced));
-                    markItemsAsSynced(unsavedSampleTrees, unsavedHeightMeasurements, unsavedInventoryTrees);
-                    
-                    showNotification(`✅ Salvati ${unsavedSampleTrees.length} piante saggio + ${unsavedInventoryTrees.length} inventario!`, 'success');
-                    appState.lastSync = new Date();
-                    
-                    setTimeout(() => {
-                        if (confirm('Dati salvati con successo!\n\nVuoi continuare a rilevare (NO) o iniziare una nuova sessione pulendo i dati locali (SÌ)?')) {
-                            clearAllLocalData();
-                        }
-                    }, 1000);
-                    
-                } else {
-                    showNotification('Dati salvati offline - Configura Google Apps Script per sincronizzazione', 'info');
-                }
-
-                return true;
-
-            } catch (error) {
-                console.error('💥 Errore salvataggio:', error);
-                showNotification('Errore nel salvataggio: ' + error.message, 'error');
-                return false;
-                
-            } finally {
-                // Reset button
-                saveBtn.disabled = false;
-                saveIcon.textContent = '💾';
-                saveText.textContent = 'Salva tutto su Google Sheets';
-                updateAllUI();
-            }
-        }
-
-        // Helper functions for sync management
-        function markCompleteTreesAsSynced(trees) {
-            trees.forEach(tree => {
-                tree.synced = true;
-                tree.syncedAt = new Date().toISOString();
-            });
-            saveToLocalStorage();
-        }
-
-        function markItemsAsSynced(sampleTrees, heightMeasurements, inventoryTrees) {
-            inventoryTrees.forEach(tree => {
-                const originalTree = appState.inventoryTrees.find(t => t.id === tree.id);
-                if (originalTree) {
-                    originalTree.synced = true;
-                    originalTree.syncedAt = new Date().toISOString();
-                }
-            });
-            saveToLocalStorage();
-        }
-
-        function clearAllLocalData() {
-            appState.sampleAreas = {
-                area1: { completeTrees: [] },
-                area2: { completeTrees: [] },
-                area3: { completeTrees: [] },
-                area4: { completeTrees: [] },
-                area5: { completeTrees: [] }
-            };
-            appState.inventoryTrees = [];
-            appState.speciesHeightAverages = {};
-            appState.selectedSpeciesForHeight = null;
-            appState.selectedSpeciesForInventory = null;
-            appState.currentSampleTree = null;
-            
-            // Reset UI
-            document.querySelectorAll('.species-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            document.querySelectorAll('.add-tree-btn, .add-height-btn').forEach(btn => {
-                btn.disabled = true;
-            });
-            
-            updateAllUI();
-            saveToLocalStorage();
-            showNotification('Tutti i dati locali sono stati puliti - Pronto per nuova sessione', 'success');
-        }
-
-        // Google Sheets Integration
-        async function saveToGoogleSheets(data) {
-            if (GOOGLE_APPS_SCRIPT_URL === 'IL_TUO_URL_QUI') {
-                throw new Error('URL Google Apps Script non configurato!');
-            }
-
-            try {
-                console.log('📤 Invio dati tramite form submit (bypass CORS):', data);
-                const result = await submitViaForm(data);
-                
-                if (result) {
-                    console.log('✅ Dati salvati con successo');
-                    return true;
-                } else {
-                    throw new Error('Nessuna risposta dal server');
-                }
-                
-            } catch (error) {
-                console.error('❌ Errore nel salvataggio:', error);
-                throw new Error(`Errore Google Sheets: ${error.message}`);
-            }
-        }
-
-        function submitViaForm(data) {
-            return new Promise((resolve, reject) => {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = GOOGLE_APPS_SCRIPT_URL;
-                form.target = 'hidden_iframe';
-                form.style.display = 'none';
-                
-                const iframe = document.createElement('iframe');
-                iframe.name = 'hidden_iframe';
-                iframe.style.display = 'none';
-                
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'data';
-                input.value = JSON.stringify(data);
-                
-                form.appendChild(input);
-                document.body.appendChild(form);
-                document.body.appendChild(iframe);
-                
-                const timeout = setTimeout(() => {
-                    cleanup();
-                    reject(new Error('Timeout: nessuna risposta in 10 secondi'));
-                }, 10000);
-                
-                iframe.onload = function() {
-                    clearTimeout(timeout);
-                    cleanup();
-                    resolve(true);
-                };
-                
-                function cleanup() {
-                    if (form.parentNode) form.parentNode.removeChild(form);
-                    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-                }
-                
-                form.submit();
-            });
-        }
-
-        function saveToLocalStorage() {
-            localStorage.setItem('forestapp-advanced', JSON.stringify(appState));
-        }
-
-        function loadStoredData() {
-            const stored = localStorage.getItem('forestapp-advanced');
-            if (stored) {
-                try {
-                    const parsedState = JSON.parse(stored);
-                    
-                    // Data migration: ensure completeTrees exists for all areas
-                    if (parsedState.sampleAreas) {
-                        Object.keys(parsedState.sampleAreas).forEach(areaKey => {
-                            const area = parsedState.sampleAreas[areaKey];
-                            
-                            // Migration: if old structure exists, convert to new
-                            if (!area.completeTrees) {
-                                area.completeTrees = [];
-                                
-                                // If old structure with separate trees and measurements exists
-                                if (area.sampleTrees && area.heightMeasurements) {
-                                    // Try to match trees with measurements and create complete trees
-                                    const treeMap = new Map();
-                                    
-                                    // Add diameter data
-                                    area.sampleTrees.forEach(tree => {
-                                        treeMap.set(tree.id, { ...tree });
-                                    });
-                                    
-                                    // Add height data
-                                    area.heightMeasurements.forEach(measurement => {
-                                        const treeId = measurement.id.replace('_height', '');
-                                        if (treeMap.has(treeId)) {
-                                            const tree = treeMap.get(treeId);
-                                            tree.height = measurement.height;
-                                            tree.heightTimestamp = measurement.timestamp;
-                                            tree.needsHeight = false;
-                                        }
-                                    });
-                                    
-                                    // Convert to completeTrees array
-                                    area.completeTrees = Array.from(treeMap.values()).filter(tree => tree.height);
-                                    
-                                    // Clean up old properties
-                                    delete area.sampleTrees;
-                                    delete area.heightMeasurements;
-                                    
-                                    console.log(`✅ Migrated ${area.completeTrees.length} trees for ${areaKey}`);
-                                }
-                            }
-                        });
-                    }
-                    
-                    // Ensure all required properties exist with defaults
-                    appState = { 
-                        ...appState, 
-                        ...parsedState,
-                        // Ensure sampleAreas has the correct structure
-                        sampleAreas: {
-                            area1: { completeTrees: [] },
-                            area2: { completeTrees: [] },
-                            area3: { completeTrees: [] },
-                            area4: { completeTrees: [] },
-                            area5: { completeTrees: [] },
-                            ...parsedState.sampleAreas
-                        }
-                    };
-                    
-                    // Restore UI
-                    document.getElementById('inventoryAreaHa').value = appState.inventoryAreaHa || 30.0;
-                    document.getElementById('sampleAreaSelect').value = appState.currentSampleArea || 'area1';
-                    
-                    // Recalculate averages
-                    calculateSpeciesHeightAverages();
-                    updateAllUI();
-                    
-                    // Save migrated data
-                    saveToLocalStorage();
-                    
-                    console.log('✅ Data loaded and migrated successfully');
-                } catch (error) {
-                    console.error('❌ Error loading stored data:', error);
-                    showNotification('Errore nel caricamento dati salvati. Riiniziando...', 'error');
-                    
-                    // Clear corrupted data and start fresh
-                    localStorage.removeItem('forestapp-advanced');
-                    updateAllUI();
-                }
-            }
-        }
-
-        // Enhanced calculateSpeciesHeightAverages with error protection
-        function calculateSpeciesHeightAverages() {
-            appState.speciesHeightAverages = {};
-            
-            // Collect all complete trees with heights for each species across all areas
-            const speciesHeights = {};
-            
-            try {
-                Object.values(appState.sampleAreas).forEach(area => {
-                    // Safety check: ensure area and completeTrees exist
-                    if (area && Array.isArray(area.completeTrees)) {
-                        area.completeTrees.forEach(tree => {
-                            if (tree && tree.height && tree.height > 0 && tree.species) {
-                                if (!speciesHeights[tree.species]) {
-                                    speciesHeights[tree.species] = [];
-                                }
-                                speciesHeights[tree.species].push(tree.height);
-                            }
-                        });
-                    }
-                });
-                
-                // Calculate averages
-                Object.entries(speciesHeights).forEach(([species, heights]) => {
-                    if (heights.length > 0) {
-                        const average = heights.reduce((sum, height) => sum + height, 0) / heights.length;
-                        appState.speciesHeightAverages[species] = {
-                            average: average,
-                            count: heights.length,
-                            min: Math.min(...heights),
-                            max: Math.max(...heights)
-                        };
-                    }
-                });
-                
-                console.log('📊 Height averages calculated:', appState.speciesHeightAverages);
-            } catch (error) {
-                console.error('❌ Error calculating height averages:', error);
-                appState.speciesHeightAverages = {};
-            }
-        }
-
-        // Enhanced addHeightMeasurement with error protection
-        function addHeightMeasurement(height) {
-            if (!appState.currentSampleTree) {
-                showNotification('Seleziona prima il diametro di una pianta!', 'error');
-                return;
-            }
-
-            try {
-                // Complete the tree measurement
-                appState.currentSampleTree.height = height;
-                appState.currentSampleTree.needsHeight = false;
-                appState.currentSampleTree.heightTimestamp = new Date().toISOString();
-
-                // Ensure current area exists and has completeTrees array
-                const currentArea = appState.sampleAreas[appState.currentSampleArea];
-                if (!currentArea) {
-                    appState.sampleAreas[appState.currentSampleArea] = { completeTrees: [] };
-                }
-                if (!Array.isArray(currentArea.completeTrees)) {
-                    currentArea.completeTrees = [];
-                }
-
-                // Add to complete trees
-                currentArea.completeTrees.push(appState.currentSampleTree);
-
-                // Reset current tree
-                appState.currentSampleTree = null;
-
-                // Re-enable diameter buttons for next tree
-                document.querySelectorAll('#sample-area .add-tree-btn').forEach(btn => {
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                });
-
-                // Disable height buttons until next diameter
-                document.querySelectorAll('#sample-area .add-height-btn').forEach(btn => {
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                    btn.innerHTML = `<span>📏</span><span>Altezza</span>`;
-                });
-
-                // Recalculate averages
-                calculateSpeciesHeightAverages();
-                updateSampleAreaUI();
-                updateInventoryUI();
-                saveToLocalStorage();
-                
-                const speciesName = SPECIES_CONFIG[appState.selectedSpeciesForHeight].name;
-                const lastTree = currentArea.completeTrees[currentArea.completeTrees.length - 1];
-                showNotification(`✅ Pianta completa: ${speciesName} Ø${lastTree.diameterClass}cm H${height}m`, 'success');
-                
-            } catch (error) {
-                console.error('❌ Error adding height measurement:', error);
-                showNotification('Errore nel salvare la misura di altezza. Riprova.', 'error');
-            }
-        }
-
-        // Export Functions - Gestione esportazione dati
-        function exportAllData() {
-            const allCompleteTrees = Object.values(appState.sampleAreas).reduce((total, area) => {
-                return total.concat(area.completeTrees);
-            }, []);
-
-            if (allCompleteTrees.length === 0 && appState.inventoryTrees.length === 0) {
-                showNotification('Nessun dato da esportare!', 'error');
-                return;
-            }
-
-            // Create comprehensive CSV
-            const csvSections = [];
-            
-            // Complete Sample Trees
-            if (allCompleteTrees.length > 0) {
-                csvSections.push('AREE_DI_SAGGIO_COMPLETE');
-                csvSections.push('ID,Timestamp,Operatore,Area,Specie,Classe_Diam,Altezza_m,GPS_Lat,GPS_Lng,Area_Bas_m2,Volume_m3');
-                allCompleteTrees.forEach(tree => {
-                    const speciesConfig = SPECIES_CONFIG[tree.species];
-                    const basalArea = calculateTreeBasalArea(tree.diameterClass);
-                    const volume = calculateSampleTreeVolume(tree.species, tree.diameterClass, tree.height);
-                    csvSections.push([
-                        tree.id,
-                        tree.timestamp,
-                        tree.operator,
-                        tree.area,
-                        speciesConfig.name,
-                        tree.diameterClass,
-                        tree.height,
-                        tree.gps ? tree.gps.lat.toFixed(6) : '',
-                        tree.gps ? tree.gps.lng.toFixed(6) : '',
-                        basalArea.toFixed(4),
-                        volume.toFixed(3)
-                    ].join(','));
-                });
-                csvSections.push('');
-            }
-
-            // Inventory Trees
-            if (appState.inventoryTrees.length > 0) {
-                csvSections.push('PIEDILISTA');
-                csvSections.push('ID,Timestamp,Operatore,Specie,Classe_Diam,GPS_Lat,GPS_Lng,Area_Bas_m2,Volume_m3');
-                appState.inventoryTrees.forEach(tree => {
-                    const speciesConfig = SPECIES_CONFIG[tree.species];
-                    const basalArea = calculateTreeBasalArea(tree.diameterClass);
-                    const volume = calculateTreeVolume(tree.species, tree.diameterClass);
-                    csvSections.push([
-                        tree.id,
-                        tree.timestamp,
-                        tree.operator,
-                        speciesConfig.name,
-                        tree.diameterClass,
-                        tree.gps ? tree.gps.lat.toFixed(6) : '',
-                        tree.gps ? tree.gps.lng.toFixed(6) : '',
-                        basalArea.toFixed(4),
-                        volume.toFixed(3)
-                    ].join(','));
-                });
-                csvSections.push('');
-            }
-
-            // Species Averages
-            if (Object.keys(appState.speciesHeightAverages).length > 0) {
-                csvSections.push('ALTEZZE_MEDIE');
-                csvSections.push('Specie,Altezza_Media_m,Campioni,Min_m,Max_m');
-                Object.entries(appState.speciesHeightAverages).forEach(([species, data]) => {
-                    const speciesConfig = SPECIES_CONFIG[species];
-                    csvSections.push([
-                        speciesConfig.name,
-                        data.average.toFixed(2),
-                        data.count,
-                        data.min.toFixed(2),
-                        data.max.toFixed(2)
-                    ].join(','));
-                });
-            }
-
-            const csvData = csvSections.join('\n');
-            downloadCSV(csvData, `rilevamento_forestale_completo_${new Date().toISOString().split('T')[0]}.csv`);
-            showNotification('Dati esportati con successo!', 'success');
-        }
-
-        function downloadCSV(csv, filename) {
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-
-        function generateReport() {
-            // Generate comprehensive forestry report
-            const allCompleteTrees = Object.values(appState.sampleAreas).reduce((total, area) => {
-                return total.concat(area.completeTrees);
-            }, []);
-
-            if (allCompleteTrees.length === 0 && appState.inventoryTrees.length === 0) {
-                showNotification('Nessun dato per generare il report!', 'error');
-                return;
-            }
-
-            const reportData = {
-                operator: appState.operatorName,
-                date: new Date().toLocaleDateString('it-IT'),
-                totalArea: appState.inventoryAreaHa,
-                sampleTrees: allCompleteTrees.length,
-                inventoryTrees: appState.inventoryTrees.length,
-                totalVolume: getTotalVolume(),
-                totalBasalArea: getTotalBasalArea(),
-                speciesData: appState.speciesHeightAverages
-            };
-
-            // Create detailed report content
-            let reportHTML = `
-                <h2>📊 Report Rilevamento Forestale</h2>
-                <p><strong>Operatore:</strong> ${reportData.operator}</p>
-                <p><strong>Data:</strong> ${reportData.date}</p>
-                <p><strong>Area Totale:</strong> ${reportData.totalArea} ha</p>
-                <hr>
-                <h3>Riassunto Dati:</h3>
-                <ul>
-                    <li>Piante di Saggio: ${reportData.sampleTrees}</li>
-                    <li>Piante Piedilista: ${reportData.inventoryTrees}</li>
-                    <li>Volume Totale: ${reportData.totalVolume.toFixed(1)} m³</li>
-                    <li>Area Basimetrica: ${reportData.totalBasalArea.toFixed(2)} m²</li>
-                </ul>
-            `;
-
-            // Open report in new window
-            const reportWindow = window.open('', '_blank');
-            reportWindow.document.write(`
-                <html>
-                <head><title>Report Forestale - ${reportData.date}</title></head>
-                <body style="font-family: Arial, sans-serif; margin: 20px;">
-                    ${reportHTML}
-                </body>
-                </html>
-            `);
-            reportWindow.document.close();
-            
-            showNotification('Report generato in nuova finestra!', 'success');
-        }
-
-        // GPS and Location Functions - Gestione GPS
-        function startGeoLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    position => {
-                        appState.gpsLocation = {
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude,
-                            accuracy: position.coords.accuracy,
-                            timestamp: new Date()
-                        };
-                        console.log('📍 GPS aggiornato:', appState.gpsLocation);
-                    },
-                    error => {
-                        console.error('❌ GPS Error:', error);
-                        showNotification('GPS non disponibile - Continua senza geolocalizzazione', 'info');
-                    },
-                    { 
-                        enableHighAccuracy: true, 
-                        maximumAge: 30000, 
-                        timeout: 10000 
-                    }
-                );
-            } else {
-                console.warn('Geolocation non supportata');
-                showNotification('Geolocalizzazione non supportata dal browser', 'info');
-            }
-        }
-
-        // Offline Detection - Gestione connettività
-        function setupOfflineDetection() {
-            window.addEventListener('online', () => {
-                appState.isOnline = true;
-                updateConnectionStatus();
-                showNotification('Connessione ripristinata!', 'success');
-            });
-            
-            window.addEventListener('offline', () => {
-                appState.isOnline = false;
-                updateConnectionStatus();
-                showNotification('Modalità offline attiva', 'info');
-            });
-            
-            updateConnectionStatus();
-        }
-
-        function updateConnectionStatus() {
-            const statusElement = document.getElementById('connectionStatus');
-            const iconElement = document.getElementById('statusIcon');
-            const textElement = document.getElementById('statusText');
-
-            if (appState.isOnline) {
-                statusElement.className = 'status-item status-online';
-                iconElement.textContent = '🟢';
-                textElement.textContent = 'Online';
-            } else {
-                statusElement.className = 'status-item status-offline';
-                iconElement.textContent = '🔴';
-                textElement.textContent = 'Offline';
-            }
-        }
-
-        // Event Listeners Setup - Gestione eventi
-        function setupEventListeners() {
-            // Keyboard shortcuts for power users
-            document.addEventListener('keydown', (event) => {
-                // Prevent shortcuts when in input fields
-                if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') return;
-                
-                // Tab switching shortcuts
-                if (event.key === '1') switchTab('sample-area');
-                if (event.key === '2') switchTab('inventory');
-                if (event.key === '3') switchTab('results');
-                
-                // Quick actions
-                if (event.ctrlKey && event.key === 's') {
-                    event.preventDefault();
-                    saveAllData();
-                }
-                if (event.ctrlKey && event.key === 'e') {
-                    event.preventDefault();
-                    exportAllData();
-                }
-            });
-
-            // Handle visibility change for battery optimization
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    console.log('App in background - Saving state...');
-                    saveToLocalStorage();
-                } else {
-                    console.log('App restored - Updating UI...');
-                    updateAllUI();
-                }
-            });
-
-            // Handle beforeunload to save data
-            window.addEventListener('beforeunload', (event) => {
-                saveToLocalStorage();
-                
-                // Check if there are unsaved changes
-                const hasUnsavedChanges = checkForUnsavedChanges();
-                if (hasUnsavedChanges) {
-                    event.preventDefault();
-                    event.returnValue = 'Ci sono dati non salvati. Sei sicuro di voler chiudere?';
-                    return event.returnValue;
-                }
-            });
-        }
-
-        function checkForUnsavedChanges() {
-            const allCompleteTrees = Object.values(appState.sampleAreas).reduce((total, area) => {
-                return total.concat(area.completeTrees);
-            }, []);
-            
-            const unsavedSample = allCompleteTrees.filter(tree => !tree.synced);
-            const unsavedInventory = appState.inventoryTrees.filter(tree => !tree.synced);
-            
-            return unsavedSample.length > 0 || unsavedInventory.length > 0;
-        }
-
-        // Utility Functions - Funzioni di utilità
-        function initializeApp() {
-            console.log('🌲 ForestApp Pro initialized');
-            console.log('📱 PWA Ready');
-            console.log('🔧 Version: Advanced with Sample Areas');
-            
-            // Check for mobile device
-            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                console.log('📱 Mobile device detected');
-                document.body.classList.add('mobile-device');
-            }
-            
-            // Performance monitoring
-            if ('performance' in window) {
-                window.addEventListener('load', () => {
-                    setTimeout(() => {
-                        const loadTime = performance.now();
-                        console.log(`⚡ App loaded in ${loadTime.toFixed(2)}ms`);
-                    }, 0);
-                });
-            }
-        }
-
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            
-            // Add timestamp for debugging
-            console.log(`🔔 [${type.toUpperCase()}] ${message}`);
-            
-            const container = document.getElementById('notifications');
-            if (!container) {
-                console.error('Notification container not found');
-                return;
-            }
-            
-            container.appendChild(notification);
-            
-            // Show notification with animation
-            setTimeout(() => notification.classList.add('show'), 100);
-            
-            // Auto-hide after 4 seconds (longer for errors)
-            const hideDelay = type === 'error' ? 6000 : 4000;
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
-            }, hideDelay);
-        }
-
-        // PWA Service Worker Registration (if available)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // Note: Service worker file would need to be created separately
-                console.log('🔧 Service Worker support detected (not implemented in this version)');
-            });
-        }
-
-        // Performance optimization: Debounce function for frequent updates
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        // Optimized UI updates for better performance
-        const debouncedUpdateUI = debounce(updateAllUI, 150);
-
-        // Global error handler
-        window.addEventListener('error', (event) => {
-            console.error('🚨 Global error:', event.error);
-            showNotification('Si è verificato un errore. Controlla la console per dettagli.', 'error');
-        });
-
-        // Unhandled promise rejection handler
-        window.addEventListener('unhandledrejection', (event) => {
-            console.error('🚨 Unhandled promise rejection:', event.reason);
-            showNotification('Errore di connessione. Riprova più tardi.', 'error');
-        });
-
-        console.log('🎯 ForestApp Pro - Tutti i moduli caricati con successo!');
-    </script>
-</body>
-</html>
 
         <!-- Header -->
         <header class="header">
@@ -2507,6 +48,12 @@
                     <div id="connectionStatus" class="status-item status-online">
                         <span id="statusIcon">🟢</span>
                         <span id="statusText">Online</span>
+                    </div>
+                    <div class="status-item">
+                        <span>📁</span>
+                        <select id="projectSelector" onchange="switchToProject(this.value)" style="background: transparent; border: none; color: inherit; font-weight: 500;">
+                            <option value="">Caricamento progetti...</option>
+                        </select>
                     </div>
                     <div class="status-item">
                         <span>📍</span>
@@ -2694,7 +241,7 @@
 
                 <!-- Height Classes -->
                 <div class="height-classes">
-                    <h3 style="margin: 1.5rem 0 1rem 0; color: var(--info);">📐 Altezze (metri)</h3>
+                    <h3>📐 Altezze (metri)</h3>
                     
                     <div class="height-row">
                         <div class="height-info">
@@ -2822,3 +369,304 @@
                 </div>
             </div>
         </div>
+
+        <!-- Inventory Tab -->
+        <div id="inventory" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        📊 Piedilista
+                    </h2>
+                    <button class="btn btn-secondary" onclick="clearInventoryData()">
+                        🗑️ Pulisci Piedilista
+                    </button>
+                </div>
+
+                <!-- Area Input -->
+                <div class="area-selector">
+                    <div class="area-input">
+                        <label for="inventoryAreaHa">Area di riferimento (ha):</label>
+                        <input type="number" id="inventoryAreaHa" step="0.1" min="0.1" max="1000" value="30.0" onchange="updateInventoryArea()">
+                    </div>
+                </div>
+
+                <!-- Volume Warning -->
+                <div class="volume-warning" id="volumeWarning" style="display: none;">
+                    <h4>⚠️ Altezze Mancanti</h4>
+                    <p>Alcune specie non hanno altezze medie dalle aree di saggio. I volumi non verranno calcolati fino a quando non avrai dati sufficienti o inserisci manualmente le altezze medie.</p>
+                </div>
+
+                <!-- Species Selection -->
+                <div class="species-selector">
+                    <div class="species-title">🌲 Seleziona Specie per Piedilista</div>
+                    <div class="species-grid">
+                        <button class="species-btn" data-species="pino-domestico" onclick="selectSpeciesForInventory('pino-domestico')">
+                            <span class="species-icon">🌲</span>
+                            <div>Pino Domestico</div>
+                            <div id="height-status-pino-domestico" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
+                        </button>
+                        <button class="species-btn" data-species="pino-marittimo" onclick="selectSpeciesForInventory('pino-marittimo')">
+                            <span class="species-icon">🌲</span>
+                            <div>Pino Marittimo</div>
+                            <div id="height-status-pino-marittimo" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
+                        </button>
+                        <button class="species-btn" data-species="pino-aleppo" onclick="selectSpeciesForInventory('pino-aleppo')">
+                            <span class="species-icon">🌲</span>
+                            <div>Pino d'Aleppo</div>
+                            <div id="height-status-pino-aleppo" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
+                        </button>
+                        <button class="species-btn" data-species="cipresso" onclick="selectSpeciesForInventory('cipresso')">
+                            <span class="species-icon">🌲</span>
+                            <div>Cipresso Comune</div>
+                            <div id="height-status-cipresso" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
+                        </button>
+                        <button class="species-btn" data-species="altro" onclick="selectSpeciesForInventory('altro')">
+                            <span class="species-icon">❓</span>
+                            <div>Altro</div>
+                            <div id="height-status-altro" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Diameter Classes for Inventory -->
+                <div class="diameter-classes">
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 5 cm</div>
+                            <div class="diameter-range">Range: 2.5 - 7.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(5)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                    
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 10 cm</div>
+                            <div class="diameter-range">Range: 7.6 - 12.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(10)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                    
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 15 cm</div>
+                            <div class="diameter-range">Range: 12.6 - 17.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(15)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                    
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 20 cm</div>
+                            <div class="diameter-range">Range: 17.6 - 22.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(20)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                    
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 25 cm</div>
+                            <div class="diameter-range">Range: 22.6 - 27.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(25)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                    
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 30 cm</div>
+                            <div class="diameter-range">Range: 27.6 - 32.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(30)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                    
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 35 cm</div>
+                            <div class="diameter-range">Range: 32.6 - 37.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(35)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                    
+                    <div class="diameter-row">
+                        <div class="diameter-info">
+                            <div class="diameter-label">Classe 40+ cm</div>
+                            <div class="diameter-range">Range: > 37.5 cm</div>
+                        </div>
+                        <button class="add-tree-btn" onclick="addInventoryTree(40)" disabled>
+                            <span>➕</span>
+                            <span>Aggiungi Pianta</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Inventory Trees -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            📝 Piedilista Recente
+                        </h2>
+                        <span id="inventoryTreeCount" class="stat-value" style="font-size: 1rem;">0 piante</span>
+                    </div>
+                    
+                    <div class="recent-entries" id="recentInventoryTrees">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            Nessuna pianta del piedilista rilevata ancora.<br>
+                            Seleziona una specie e inizia il conteggio!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Tab -->
+        <div id="results" class="tab-content">
+            <!-- Project Management Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        📂 Gestione Progetti
+                    </h2>
+                    <div id="projectInfo" style="font-size: 0.9rem; color: var(--text-secondary);">
+                        Nessun progetto caricato
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="createNewProject()">
+                        ➕ Nuovo Progetto
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="exportCurrentProject()">
+                        📄 Esporta Progetto
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="importProject()">
+                        📥 Importa Progetto
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="deleteCurrentProject()" style="background: var(--error); color: white;">
+                        🗑️ Elimina Progetto
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        📈 Risultati e Statistiche
+                    </h2>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalAreaHa">30.0 ha</div>
+                        <div class="stat-label">Area Totale</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="treesPerHaResult">0</div>
+                        <div class="stat-label">Piante/Ha</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="basalAreaHa">0.0 m²/ha</div>
+                        <div class="stat-label">Area Basim./Ha</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="volumeHa">0.0 m³/ha</div>
+                        <div class="stat-label">Volume/Ha</div>
+                    </div>
+                </div>
+
+                <!-- Species Analysis -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            🌲 Analisi per Specie
+                        </h2>
+                    </div>
+                    
+                    <div id="speciesAnalysis">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            Nessun dato da analizzare ancora
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Height Analysis -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            📏 Analisi Altezze Medie
+                        </h2>
+                    </div>
+                    
+                    <div id="heightAnalysis">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            Nessuna area di saggio rilevata ancora
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions">
+                    <button class="btn btn-secondary" onclick="exportAllData()">
+                        📄 Esporta CSV Completo
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="generateReport()">
+                        📊 Genera Report Completo
+                    </button>
+                    
+                    <button id="saveBtn" class="btn btn-primary" onclick="saveToGoogleSheetsOptional()" style="background: var(--secondary); color: var(--text-primary); border: 1px solid var(--border);">
+                        <span id="saveIcon">☁️</span>
+                        <span id="saveText">Sync con Google Sheets (Opzionale)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notifications"></div>
+
+    <!-- JavaScript -->
+    <script src="js/database.js"></script>
+    <script src="js/projectManager.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('🔧 Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
