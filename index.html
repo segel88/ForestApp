@@ -3,670 +3,432 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ForestApp Pro - Rilevamento Forestale</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="description" content="Applicazione PWA per rilevamenti forestali professionali con aree di saggio e piedilista">
-    <meta name="theme-color" content="#16a34a">
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Apple PWA Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="ForestApp Pro">
-    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
-    
-    <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/icon-16x16.png">
-    
-    <!-- Stylesheets -->
+    <title>ForestApp - Rilevamento Forestale</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#16a34a">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Configuration Alert -->
-        <div class="config-alert" id="configAlert" style="display: none;">
-            <h3>⚠️ CONFIGURAZIONE RICHIESTA</h3>
-            <p>Prima di usare l'app, devi sostituire l'URL di Google Apps Script nel codice.</p>
-            <p>Cerca questa riga: <code>const GOOGLE_APPS_SCRIPT_URL = 'IL_TUO_URL_QUI';</code></p>
-            <p>E sostituiscila con il tuo URL vero di Google Apps Script.</p>
-        </div>
+    <!-- Project Selection Screen -->
+    <div id="project-screen" class="screen">
+        <div class="project-container">
+            <header class="project-header">
+                <h1>🌲 ForestApp</h1>
+                <p>Rilevamento Forestale Professionale</p>
+            </header>
 
-        <!-- Header -->
-        <header class="header">
-            <div class="header-top">
-                <div class="app-title">
-                    <div class="app-icon">🌲</div>
-                    <div>
-                        <h1>ForestApp Pro</h1>
-                        <div class="subtitle">Con Aree di Saggio</div>
-                    </div>
-                </div>
-                
-                <div class="status-bar">
-                    <div id="connectionStatus" class="status-item status-online">
-                        <span id="statusIcon">🟢</span>
-                        <span id="statusText">Online</span>
-                    </div>
-                    <div class="status-item">
-                        <span>📁</span>
-                        <select id="projectSelector" onchange="switchToProject(this.value)" style="background: transparent; border: none; color: inherit; font-weight: 500;">
-                            <option value="">Caricamento progetti...</option>
-                        </select>
-                    </div>
-                    <div class="status-item">
-                        <span>📍</span>
-                        <span id="currentArea">Area 1</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalSampleTrees">0</div>
-                    <div class="stat-label">Piante Saggio</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalInventoryTrees">0</div>
-                    <div class="stat-label">Piedilista</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="speciesWithHeights">0/5</div>
-                    <div class="stat-label">Specie con Altezze</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalVolume">0.0 m³</div>
-                    <div class="stat-label">Volume Totale</div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Tab Navigation -->
-        <div class="tab-navigation">
-            <button class="tab-btn active" onclick="switchTab('sample-area')">
-                <span>📏</span>
-                <span>Aree di Saggio</span>
-            </button>
-            <button class="tab-btn" onclick="switchTab('inventory')">
-                <span>📊</span>
-                <span>Piedilista</span>
-            </button>
-            <button class="tab-btn" onclick="switchTab('results')">
-                <span>📈</span>
-                <span>Risultati</span>
-            </button>
-        </div>
-
-        <!-- Sample Area Tab -->
-        <div id="sample-area" class="tab-content active">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        📏 Area di Saggio
-                    </h2>
-                </div>
-
-                <!-- Area Selection -->
-                <div class="area-selector">
-                    <div class="area-input">
-                        <label for="sampleAreaSelect">Area di Saggio:</label>
-                        <select id="sampleAreaSelect" onchange="selectSampleArea(this.value)">
-                            <option value="area1">Area 1</option>
-                            <option value="area2">Area 2</option>
-                            <option value="area3">Area 3</option>
-                            <option value="area4">Area 4</option>
-                            <option value="area5">Area 5</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Species Selection -->
-                <div class="species-selector">
-                    <div class="species-title">🌲 Seleziona Specie per Rilevamento Altezze</div>
-                    <div class="species-grid">
-                        <button class="species-btn" data-species="pino-domestico" onclick="selectSpeciesForHeight('pino-domestico')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino Domestico</div>
-                        </button>
-                        <button class="species-btn" data-species="pino-marittimo" onclick="selectSpeciesForHeight('pino-marittimo')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino Marittimo</div>
-                        </button>
-                        <button class="species-btn" data-species="pino-aleppo" onclick="selectSpeciesForHeight('pino-aleppo')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino d'Aleppo</div>
-                        </button>
-                        <button class="species-btn" data-species="cipresso" onclick="selectSpeciesForHeight('cipresso')">
-                            <span class="species-icon">🌲</span>
-                            <div>Cipresso Comune</div>
-                        </button>
-                        <button class="species-btn" data-species="altro" onclick="selectSpeciesForHeight('altro')">
-                            <span class="species-icon">❓</span>
-                            <div>Altro</div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Diameter Classes for Sample -->
-                <div class="diameter-classes">
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 5 cm</div>
-                            <div class="diameter-range">Range: 2.5 - 7.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(5)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 10 cm</div>
-                            <div class="diameter-range">Range: 7.6 - 12.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(10)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 15 cm</div>
-                            <div class="diameter-range">Range: 12.6 - 17.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(15)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 20 cm</div>
-                            <div class="diameter-range">Range: 17.6 - 22.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(20)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 25 cm</div>
-                            <div class="diameter-range">Range: 22.6 - 27.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(25)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 30 cm</div>
-                            <div class="diameter-range">Range: 27.6 - 32.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(30)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 35 cm</div>
-                            <div class="diameter-range">Range: 32.6 - 37.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(35)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 40+ cm</div>
-                            <div class="diameter-range">Range: > 37.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addSampleTree(40)" disabled>
-                            <span>➕</span>
-                            <span>Pianta Saggio</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Height Classes -->
-                <div class="height-classes">
-                    <h3>📐 Altezze (metri)</h3>
-                    
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">2-4 metri</div>
-                            <div class="height-range">Range: 2.0 - 3.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(3)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 3m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">4-6 metri</div>
-                            <div class="height-range">Range: 4.0 - 5.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(5)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 5m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">6-8 metri</div>
-                            <div class="height-range">Range: 6.0 - 7.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(7)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 7m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">8-10 metri</div>
-                            <div class="height-range">Range: 8.0 - 9.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(9)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 9m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">10-12 metri</div>
-                            <div class="height-range">Range: 10.0 - 11.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(11)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 11m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">12-15 metri</div>
-                            <div class="height-range">Range: 12.0 - 14.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(13.5)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 13.5m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">15-18 metri</div>
-                            <div class="height-range">Range: 15.0 - 17.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(16.5)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 16.5m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">18-22 metri</div>
-                            <div class="height-range">Range: 18.0 - 21.9 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(20)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 20m</span>
-                        </button>
-                    </div>
-
-                    <div class="height-row">
-                        <div class="height-info">
-                            <div class="height-label">22+ metri</div>
-                            <div class="height-range">Range: > 22.0 m</div>
-                        </div>
-                        <button class="add-height-btn" onclick="addHeightMeasurement(25)" disabled>
-                            <span>📏</span>
-                            <span>Altezza 25m</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Height Averages Display -->
-                <div class="height-averages" id="heightAverages">
-                    <h4>📊 Altezze Medie Calcolate</h4>
-                    <div id="averagesList">
-                        <p style="text-align: center; color: var(--text-secondary);">Nessuna altezza rilevata ancora</p>
-                    </div>
-                </div>
-
-                <!-- Recent Sample Trees -->
+            <div class="project-content">
                 <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            📝 Piante Saggio Recenti
-                        </h2>
-                        <span id="sampleTreeCount" class="stat-value" style="font-size: 1rem;">0 piante</span>
-                    </div>
+                    <h2>Gestione Progetti</h2>
                     
-                    <div class="recent-entries" id="recentSampleTrees">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Nessuna pianta di saggio rilevata ancora.<br>
-                            Seleziona una specie e inizia i rilevamenti!
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Inventory Tab -->
-        <div id="inventory" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        📊 Piedilista
-                    </h2>
-                    <button class="btn btn-secondary" onclick="clearInventoryData()">
-                        🗑️ Pulisci Piedilista
-                    </button>
-                </div>
-
-                <!-- Area Input -->
-                <div class="area-selector">
-                    <div class="area-input">
-                        <label for="inventoryAreaHa">Area di riferimento (ha):</label>
-                        <input type="number" id="inventoryAreaHa" step="0.1" min="0.1" max="1000" value="30.0" onchange="updateInventoryArea()">
-                    </div>
-                </div>
-
-                <!-- Volume Warning -->
-                <div class="volume-warning" id="volumeWarning" style="display: none;">
-                    <h4>⚠️ Altezze Mancanti</h4>
-                    <p>Alcune specie non hanno altezze medie dalle aree di saggio. I volumi non verranno calcolati fino a quando non avrai dati sufficienti o inserisci manualmente le altezze medie.</p>
-                </div>
-
-                <!-- Species Selection -->
-                <div class="species-selector">
-                    <div class="species-title">🌲 Seleziona Specie per Piedilista</div>
-                    <div class="species-grid">
-                        <button class="species-btn" data-species="pino-domestico" onclick="selectSpeciesForInventory('pino-domestico')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino Domestico</div>
-                            <div id="height-status-pino-domestico" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
+                    <div class="project-actions">
+                        <button id="new-project-btn" class="btn-primary">
+                            ➕ Nuovo Progetto
                         </button>
-                        <button class="species-btn" data-species="pino-marittimo" onclick="selectSpeciesForInventory('pino-marittimo')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino Marittimo</div>
-                            <div id="height-status-pino-marittimo" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                        <button class="species-btn" data-species="pino-aleppo" onclick="selectSpeciesForInventory('pino-aleppo')">
-                            <span class="species-icon">🌲</span>
-                            <div>Pino d'Aleppo</div>
-                            <div id="height-status-pino-aleppo" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                        <button class="species-btn" data-species="cipresso" onclick="selectSpeciesForInventory('cipresso')">
-                            <span class="species-icon">🌲</span>
-                            <div>Cipresso Comune</div>
-                            <div id="height-status-cipresso" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                        <button class="species-btn" data-species="altro" onclick="selectSpeciesForInventory('altro')">
-                            <span class="species-icon">❓</span>
-                            <div>Altro</div>
-                            <div id="height-status-altro" style="font-size: 0.7rem; margin-top: 0.25rem;"></div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Diameter Classes for Inventory -->
-                <div class="diameter-classes">
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 5 cm</div>
-                            <div class="diameter-range">Range: 2.5 - 7.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(5)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 10 cm</div>
-                            <div class="diameter-range">Range: 7.6 - 12.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(10)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 15 cm</div>
-                            <div class="diameter-range">Range: 12.6 - 17.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(15)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 20 cm</div>
-                            <div class="diameter-range">Range: 17.6 - 22.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(20)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 25 cm</div>
-                            <div class="diameter-range">Range: 22.6 - 27.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(25)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 30 cm</div>
-                            <div class="diameter-range">Range: 27.6 - 32.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(30)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 35 cm</div>
-                            <div class="diameter-range">Range: 32.6 - 37.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(35)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                    
-                    <div class="diameter-row">
-                        <div class="diameter-info">
-                            <div class="diameter-label">Classe 40+ cm</div>
-                            <div class="diameter-range">Range: > 37.5 cm</div>
-                        </div>
-                        <button class="add-tree-btn" onclick="addInventoryTree(40)" disabled>
-                            <span>➕</span>
-                            <span>Aggiungi Pianta</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Recent Inventory Trees -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            📝 Piedilista Recente
-                        </h2>
-                        <span id="inventoryTreeCount" class="stat-value" style="font-size: 1rem;">0 piante</span>
-                    </div>
-                    
-                    <div class="recent-entries" id="recentInventoryTrees">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Nessuna pianta del piedilista rilevata ancora.<br>
-                            Seleziona una specie e inizia il conteggio!
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Results Tab -->
-        <div id="results" class="tab-content">
-            <!-- Project Management Card -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        📂 Gestione Progetti
-                    </h2>
-                    <div id="projectInfo" style="font-size: 0.9rem; color: var(--text-secondary);">
-                        Nessun progetto caricato
-                    </div>
-                </div>
-
-                <div class="actions">
-                    <button class="btn btn-primary" onclick="createNewProject()">
-                        ➕ Nuovo Progetto
-                    </button>
-                    
-                    <button class="btn btn-secondary" onclick="exportCurrentProject()">
-                        📄 Esporta Progetto
-                    </button>
-                    
-                    <button class="btn btn-secondary" onclick="importProject()">
-                        📥 Importa Progetto
-                    </button>
-                    
-                    <button class="btn btn-secondary" onclick="deleteCurrentProject()" style="background: var(--error); color: white;">
-                        🗑️ Elimina Progetto
-                    </button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        📈 Risultati e Statistiche
-                    </h2>
-                </div>
-
-                <!-- Summary Stats -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalAreaHa">30.0 ha</div>
-                        <div class="stat-label">Area Totale</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="treesPerHaResult">0</div>
-                        <div class="stat-label">Piante/Ha</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="basalAreaHa">0.0 m²/ha</div>
-                        <div class="stat-label">Area Basim./Ha</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="volumeHa">0.0 m³/ha</div>
-                        <div class="stat-label">Volume/Ha</div>
-                    </div>
-                </div>
-
-                <!-- Species Analysis -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            🌲 Analisi per Specie
-                        </h2>
-                    </div>
-                    
-                    <div id="speciesAnalysis">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Nessun dato da analizzare ancora
+                        
+                        <div class="project-form" id="new-project-form" style="display: none;">
+                            <div class="form-group">
+                                <label>Nome Progetto:</label>
+                                <input type="text" id="project-name-input" placeholder="es. Bosco di Pino 2024">
+                            </div>
+                            <div class="form-group">
+                                <label>Area Totale (ha):</label>
+                                <input type="number" id="project-area-input" value="30" min="0.1" step="0.1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Specie da Rilevare:</label>
+                                <p class="form-help">Aggiungi le specie che troverai nel tuo rilevamento:</p>
+                                <div id="project-species-list" class="species-list">
+                                    <p class="empty">Nessuna specie aggiunta. Inizia aggiungendo le prime specie.</p>
+                                </div>
+                                
+                                <div class="add-species-section">
+                                    <div class="species-input-form" id="species-input-form">
+                                        <div class="form-row">
+                                            <input type="text" id="new-species-name" placeholder="Nome specie (es. Pino domestico, Quercia, etc.)">
+                                            <div class="emoji-selector">
+                                                <button type="button" id="emoji-btn" class="emoji-btn">🌲</button>
+                                                <div id="emoji-dropdown" class="emoji-dropdown" style="display: none;">
+                                                    <!-- Emoji options will be populated by JavaScript -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <label>Fattore di Forma:</label>
+                                            <input type="number" id="new-species-factor" value="0.5" min="0.1" max="1.0" step="0.01">
+                                            <label>Altezza Media (m):</label>
+                                            <input type="number" id="new-species-height" value="15" min="0.5" max="50" step="0.1">
+                                            <button type="button" id="add-species-to-project-btn" class="btn-sm">Aggiungi Specie</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-buttons">
+                                <button id="create-project-btn" class="btn">Crea</button>
+                                <button id="cancel-project-btn" class="btn-secondary">Annulla</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Height Analysis -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            📏 Analisi Altezze Medie
-                        </h2>
+                <div class="card" id="existing-projects-card">
+                    <h3>Progetti Esistenti</h3>
+                    <div id="projects-list" class="projects-list">
+                        <p class="empty">Nessun progetto salvato</p>
                     </div>
-                    
-                    <div id="heightAnalysis">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Nessuna area di saggio rilevata ancora
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="actions">
-                    <button class="btn btn-secondary" onclick="exportAllData()">
-                        📄 Esporta CSV Completo
-                    </button>
-                    
-                    <button class="btn btn-secondary" onclick="generateReport()">
-                        📊 Genera Report Completo
-                    </button>
-                    
-                    <button id="saveBtn" class="btn btn-primary" onclick="saveToGoogleSheetsOptional()" style="background: var(--secondary); color: var(--text-primary); border: 1px solid var(--border);">
-                        <span id="saveIcon">☁️</span>
-                        <span id="saveText">Sync con Google Sheets (Opzionale)</span>
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Notification Container -->
-    <div id="notifications"></div>
+    <!-- Main App -->
+    <div id="app" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🌲 ForestApp</h1>
+                <div class="status">
+                    <span id="status">Online</span>
+                    <span id="project-name">Nuovo Progetto</span>
+                </div>
+            </div>
+            
+            <!-- Stats Bar -->
+            <div class="stats">
+                <div class="stat">
+                    <span class="value" id="sample-count">0</span>
+                    <span class="label">Saggio</span>
+                </div>
+                <div class="stat">
+                    <span class="value" id="inventory-count">0</span>
+                    <span class="label">Piedilista</span>
+                </div>
+                <div class="stat">
+                    <span class="value" id="volume-total">0.0</span>
+                    <span class="label">m³</span>
+                </div>
+            </div>
+        </header>
 
-    <!-- JavaScript -->
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="sample">📏 Aree Saggio</button>
+            <button class="nav-btn" data-tab="inventory">📊 Piedilista</button>
+            <button class="nav-btn" data-tab="results">📈 Risultati</button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Sample Area Tab -->
+            <section id="sample-tab" class="tab active">
+                <div class="card">
+                    <h2>Aree di Saggio</h2>
+                    
+                    <!-- Area Selector -->
+                    <div class="form-group">
+                        <label>Area di Saggio:</label>
+                        <select id="area-selector">
+                            <option value="1">Area 1</option>
+                            <option value="2">Area 2</option>
+                            <option value="3">Area 3</option>
+                            <option value="4">Area 4</option>
+                            <option value="5">Area 5</option>
+                        </select>
+                    </div>
+
+                    <!-- Species Selector -->
+                    <div class="form-group">
+                        <label>Specie:</label>
+                        <div id="sample-species-buttons" class="species-buttons">
+                            <!-- Species buttons will be generated dynamically -->
+                        </div>
+                        <div class="species-management-buttons">
+                            <button class="add-species-btn" onclick="showAddSpeciesModal('sample')">
+                                + Aggiungi Nuova Specie
+                            </button>
+                            <button class="manage-species-btn" onclick="showSpeciesManagementModal('delete')">
+                                🗑️ Elimina Specie
+                            </button>
+                            <button class="manage-species-btn" onclick="showSpeciesManagementModal('modify')">
+                                ✏️ Modifica Specie
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Diameter Classes -->
+                    <div class="form-group">
+                        <label>Diametro (cm):</label>
+                        <div class="diameter-buttons">
+                            <button class="diameter-btn" data-diameter="5" disabled>5cm</button>
+                            <button class="diameter-btn" data-diameter="10" disabled>10cm</button>
+                            <button class="diameter-btn" data-diameter="15" disabled>15cm</button>
+                            <button class="diameter-btn" data-diameter="20" disabled>20cm</button>
+                            <button class="diameter-btn" data-diameter="25" disabled>25cm</button>
+                            <button class="diameter-btn" data-diameter="30" disabled>30cm</button>
+                            <button class="diameter-btn" data-diameter="35" disabled>35cm</button>
+                            <button class="diameter-btn" data-diameter="40" disabled>40cm</button>
+                            <button class="diameter-btn" data-diameter="45" disabled>45cm</button>
+                            <button class="diameter-btn" data-diameter="50" disabled>50cm</button>
+                            <button class="diameter-btn" data-diameter="55" disabled>55cm</button>
+                            <button class="diameter-btn" data-diameter="60" disabled>60cm</button>
+                        </div>
+                        <button class="custom-diameter-btn" id="custom-diameter-sample-btn" onclick="showCustomDiameterModal('sample')" disabled>
+                            📏 Inserisci altro diametro
+                        </button>
+                    </div>
+
+                    <!-- Height Input -->
+                    <div class="form-group" id="height-input" style="display: none;">
+                        <label>Altezza (m):</label>
+                        <div class="height-buttons">
+                            <button class="height-btn" data-height="3">3m</button>
+                            <button class="height-btn" data-height="5">5m</button>
+                            <button class="height-btn" data-height="7">7m</button>
+                            <button class="height-btn" data-height="9">9m</button>
+                            <button class="height-btn" data-height="11">11m</button>
+                            <button class="height-btn" data-height="13.5">13.5m</button>
+                            <button class="height-btn" data-height="16.5">16.5m</button>
+                            <button class="height-btn" data-height="20">20m</button>
+                            <button class="height-btn" data-height="25">25m</button>
+                        </div>
+                    </div>
+
+                    <div id="sample-status" class="status-message"></div>
+                </div>
+
+                <!-- Recent Sample Trees -->
+                <div class="card">
+                    <h3>Piante Saggio Recenti</h3>
+                    <div id="sample-list" class="tree-list">
+                        <p class="empty">Nessuna pianta di saggio ancora</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Inventory Tab -->
+            <section id="inventory-tab" class="tab">
+                <div class="card">
+                    <h2>Piedilista Forestale</h2>
+                    
+                    <!-- Area Input -->
+                    <div class="form-group">
+                        <label>Area Totale (ha):</label>
+                        <input type="number" id="total-area" value="30" min="0.1" step="0.1">
+                    </div>
+
+                    <!-- Species Selector -->
+                    <div class="form-group">
+                        <label>Specie:</label>
+                        <div id="inventory-species-buttons" class="species-buttons">
+                            <!-- Species buttons will be generated dynamically -->
+                        </div>
+                        <div class="species-management-buttons">
+                            <button class="add-species-btn" onclick="showAddSpeciesModal('inventory')">
+                                + Aggiungi Nuova Specie
+                            </button>
+                            <button class="manage-species-btn" onclick="showSpeciesManagementModal('delete')">
+                                🗑️ Elimina Specie
+                            </button>
+                            <button class="manage-species-btn" onclick="showSpeciesManagementModal('modify')">
+                                ✏️ Modifica Specie
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Diameter Classes -->
+                    <div class="form-group">
+                        <label>Diametro (cm):</label>
+                        <div class="diameter-buttons">
+                            <button class="diameter-btn inventory" data-diameter="5" disabled>5cm</button>
+                            <button class="diameter-btn inventory" data-diameter="10" disabled>10cm</button>
+                            <button class="diameter-btn inventory" data-diameter="15" disabled>15cm</button>
+                            <button class="diameter-btn inventory" data-diameter="20" disabled>20cm</button>
+                            <button class="diameter-btn inventory" data-diameter="25" disabled>25cm</button>
+                            <button class="diameter-btn inventory" data-diameter="30" disabled>30cm</button>
+                            <button class="diameter-btn inventory" data-diameter="35" disabled>35cm</button>
+                            <button class="diameter-btn inventory" data-diameter="40" disabled>40cm</button>
+                            <button class="diameter-btn inventory" data-diameter="45" disabled>45cm</button>
+                            <button class="diameter-btn inventory" data-diameter="50" disabled>50cm</button>
+                            <button class="diameter-btn inventory" data-diameter="55" disabled>55cm</button>
+                            <button class="diameter-btn inventory" data-diameter="60" disabled>60cm</button>
+                        </div>
+                        <button class="custom-diameter-btn" id="custom-diameter-inventory-btn" onclick="showCustomDiameterModal('inventory')" disabled>
+                            📏 Inserisci altro diametro
+                        </button>
+                    </div>
+
+                    <button id="clear-inventory" class="btn-danger">🗑️ Pulisci Piedilista</button>
+                </div>
+
+                <!-- Recent Inventory Trees -->
+                <div class="card">
+                    <h3>Piedilista Recente</h3>
+                    <div id="inventory-list" class="tree-list">
+                        <p class="empty">Nessuna pianta in piedilista</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Tab -->
+            <section id="results-tab" class="tab">
+                <div class="card">
+                    <h2>Gestione Progetti</h2>
+                    <div class="project-actions">
+                        <button id="new-project" class="btn">➕ Nuovo Progetto</button>
+                        <button id="export-data" class="btn">📄 Esporta Dati</button>
+                        <button id="clear-all" class="btn-danger">🗑️ Pulisci Tutto</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Statistiche</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-trees">0</div>
+                            <div class="stat-label">Piante Totali</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="trees-per-ha">0</div>
+                            <div class="stat-label">Piante/Ha</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="basal-area">0.00</div>
+                            <div class="stat-label">Area Basim. m²</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="volume-per-ha">0.0</div>
+                            <div class="stat-label">Volume m³/ha</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Altezze Medie per Specie</h3>
+                    <div id="height-averages" class="height-list">
+                        <p class="empty">Nessuna altezza rilevata</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Analisi per Specie</h3>
+                    <div id="species-analysis" class="species-list">
+                        <p class="empty">Nessun dato da analizzare</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
     <script src="js/database.js"></script>
-    <script src="js/projectManager.js"></script>
     <script src="js/app.js"></script>
     
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('🔧 Service Worker registered:', registration);
-                    })
-                    .catch(error => {
-                        console.log('❌ Service Worker registration failed:', error);
-                    });
-            });
-        }
-    </script>
+    <!-- Add Species Modal -->
+    <div id="species-modal" class="species-modal" style="display: none;">
+        <div class="species-modal-content">
+            <h3>Aggiungi Nuova Specie</h3>
+            <div class="species-form">
+                <div class="form-group">
+                    <label>Nome Specie:</label>
+                    <input type="text" id="modal-species-name" placeholder="es. Quercia, Faggio, etc.">
+                </div>
+                <div class="form-group">
+                    <label>Icona:</label>
+                    <div class="emoji-selector">
+                        <button type="button" id="modal-emoji-btn" class="emoji-btn">🌲</button>
+                        <div id="modal-emoji-dropdown" class="emoji-dropdown" style="display: none;">
+                            <!-- Emoji options will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Fattore di Forma:</label>
+                    <input type="number" id="modal-species-factor" value="0.5" min="0.1" max="1.0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Altezza Media per Piedilista (m):</label>
+                    <input type="number" id="modal-species-height" value="15" min="0.5" max="50" step="0.1" placeholder="es. 15.5">
+                    <p class="form-help">Altezza che verrà usata automaticamente per i calcoli nel Piedilista</p>
+                </div>
+            </div>
+            <div class="species-form-buttons">
+                <button id="save-species-btn" class="btn">Aggiungi</button>
+                <button id="cancel-species-btn" class="btn-secondary">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Species Management Modal -->
+    <div id="species-management-modal" class="species-modal" style="display: none;">
+        <div class="species-modal-content">
+            <h3 id="management-modal-title">Gestione Specie</h3>
+            <div id="species-management-content">
+                <div id="species-list-container" class="species-management-list">
+                    <!-- Species list will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="species-form-buttons">
+                <button id="cancel-management-btn" class="btn-secondary">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modify Species Modal -->
+    <div id="modify-species-modal" class="species-modal" style="display: none;">
+        <div class="species-modal-content">
+            <h3>Modifica Specie</h3>
+            <div class="species-form">
+                <div class="form-group">
+                    <label>Nome Specie:</label>
+                    <input type="text" id="modify-species-name" placeholder="es. Quercia, Faggio, etc.">
+                </div>
+                <div class="form-group">
+                    <label>Icona:</label>
+                    <div class="emoji-selector">
+                        <button type="button" id="modify-emoji-btn" class="emoji-btn">🌲</button>
+                        <div id="modify-emoji-dropdown" class="emoji-dropdown" style="display: none;">
+                            <!-- Emoji options will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Fattore di Forma:</label>
+                    <input type="number" id="modify-species-factor" value="0.5" min="0.1" max="1.0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Altezza Media per Piedilista (m):</label>
+                    <input type="number" id="modify-species-height" value="15" min="0.5" max="50" step="0.1" placeholder="es. 15.5">
+                    <p class="form-help">Altezza che verrà usata automaticamente per i calcoli nel Piedilista</p>
+                </div>
+            </div>
+            <div class="species-form-buttons">
+                <button id="save-modify-species-btn" class="btn">Salva Modifiche</button>
+                <button id="cancel-modify-species-btn" class="btn-secondary">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Diameter Modal -->
+    <div id="custom-diameter-modal" class="species-modal" style="display: none;">
+        <div class="species-modal-content">
+            <h3>Inserisci Diametro Personalizzato</h3>
+            <div class="species-form">
+                <div class="form-group">
+                    <label>Diametro (cm):</label>
+                    <input type="number" id="custom-diameter-input" min="1" max="200" step="0.1" placeholder="es. 75.5">
+                </div>
+                <p class="form-help">Inserisci il diametro in centimetri (maggiore di 60cm)</p>
+            </div>
+            <div class="species-form-buttons">
+                <button id="save-custom-diameter-btn" class="btn">Conferma</button>
+                <button id="cancel-custom-diameter-btn" class="btn-secondary">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notifications"></div>
 </body>
 </html>

@@ -1,1463 +1,1437 @@
-/* ForestApp PWA - Main Application with IndexedDB */
+// ForestApp - Simplified Clean Version
 
-console.log('🚀 Loading app.js...');
+// Available emoji options for species
+const EMOJI_OPTIONS = {
+    'conifers': ['🌲', '🌿', '🎄'],
+    'deciduous': ['🌳', '🌴', '🍃'],
+    'colored': ['🟢', '🔵', '🔴', '🟡', '🟠', '🟣'],
+    'special': ['🌾', '🪴', '🌱', '🍀', '🌵', '🎋']
+};
 
-// ⚠️ ⚠️ ⚠️ SOSTITUISCI QUESTO URL CON IL TUO GOOGLE APPS SCRIPT URL ⚠️ ⚠️ ⚠️
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNuHQtZdmne2vvcm_AR18kSesQVemwnElm_XhhTymKTBxZclC1NtAns7KVv4xgfRcLQw/exec';
+// Current project species (will be populated from project data)
+let SPECIES = {};
 
-console.log('✅ Constants loaded');
+// Project species list for creation form
+let projectSpeciesList = [];
 
-// App State - Enhanced for multi-project support
-let appState = {
-    isOnline: navigator.onLine,
-    operatorName: '',
-    currentProjectId: null,
-    currentSampleArea: 'area1',
-    selectedSpeciesForHeight: null,
-    selectedSpeciesForInventory: null,
-    inventoryAreaHa: 30.0,
-    
-    // Current tree being measured in sample area
-    currentSampleTree: null,
-    
-    // Sample areas data structure
-    sampleAreas: {
-        area1: { completeTrees: [] },
-        area2: { completeTrees: [] },
-        area3: { completeTrees: [] },
-        area4: { completeTrees: [] },
-        area5: { completeTrees: [] }
-    },
-    
-    // Inventory trees (piedilista)
+// App state
+let app = {
+    currentProject: null,
+    projects: [],
+    currentTab: 'sample',
+    currentArea: 1,
+    totalArea: 30,
+    sampleTrees: [],
     inventoryTrees: [],
-    
-    // Calculated averages
-    speciesHeightAverages: {},
-    
-    gpsLocation: null,
-    lastSync: null
+    heightAverages: {},
+    selectedSpeciesSample: null,
+    selectedSpeciesInventory: null,
+    currentSampleTree: null,
+    addingSpeciesFor: null // 'sample' or 'inventory'
 };
 
-// Species Configuration - Same as before
-const SPECIES_CONFIG = {
-    'pino-domestico': {
-        name: 'Pino Domestico',
-        scientific: 'Pinus pinea',
-        formFactor: 0.45
-    },
-    'pino-marittimo': {
-        name: 'Pino Marittimo',
-        scientific: 'Pinus pinaster',
-        formFactor: 0.42
-    },
-    'pino-aleppo': {
-        name: "Pino d'Aleppo",
-        scientific: 'Pinus halepensis',
-        formFactor: 0.40
-    },
-    'cipresso': {
-        name: 'Cipresso Comune',
-        scientific: 'Cupressus sempervirens',
-        formFactor: 0.48
-    },
-    'altro': {
-        name: 'Altro',
-        scientific: 'Altre specie',
-        formFactor: 0.45
-    }
-};
-
-// Global instances
-let forestDB = null;
-let projectManager = null;
-
-// Initialize App
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 DOMContentLoaded event fired');
-    console.log('🔍 Current switchTab type:', typeof switchTab);
-    console.log('🔍 Current window.switchTab type:', typeof window.switchTab);
-    try {
-        console.log('🔄 Starting ForestApp initialization...');
-        showNotification('🔄 Inizializzazione ForestApp...', 'info');
-        
-        // Initialize database
-        console.log('🔄 Initializing database...');
-        forestDB = await initializeDatabase();
-        console.log('✅ Database initialized');
-        
-        // Initialize project manager
-        console.log('🔄 Initializing project manager...');
-        projectManager = await initializeProjectManager(forestDB);
-        console.log('✅ Project manager initialized');
-        
-        // Initialize app
-        console.log('🔄 Initializing app...');
-        initializeApp();
-        console.log('🔄 Setting up event listeners...');
-        setupEventListeners();
-        console.log('🔄 Setting up button debugging...');
-        debugButtonSetup();
-        console.log('🔄 Starting geolocation...');
-        startGeoLocation();
-        console.log('🔄 Setting up offline detection...');
-        setupOfflineDetection();
-        
-        // Get operator name if not set
-        appState.operatorName = await forestDB.getSetting('operatorName');
-        if (!appState.operatorName) {
-            appState.operatorName = prompt('Inserisci il tuo nome:') || 'Operatore';
-            await forestDB.setSetting('operatorName', appState.operatorName);
-        }
-        
-        // Check if URL is configured
-        if (GOOGLE_APPS_SCRIPT_URL === 'IL_TUO_URL_QUI') {
-            document.getElementById('configAlert').style.display = 'block';
-        } else {
-            document.getElementById('configAlert').style.display = 'none';
-        }
-        
-        // Update UI
-        updateAllUI();
-        updateProjectSelector();
-        
-        showNotification('✅ ForestApp inizializzato con successo!', 'success');
-        
-    } catch (error) {
-        console.error('❌ App initialization failed:', error);
-        showNotification('❌ Errore nell\'inizializzazione dell\'app', 'error');
-    }
+// Initialize app
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🌲 ForestApp starting...');
+    
+    loadProjects();
+    setupProjectEventListeners();
+    updateProjectsUI();
+    
+    console.log('✅ ForestApp ready!');
 });
 
-// Tab Switching - Same as before but with database save
+// Event listeners
+function setupEventListeners() {
+    // Tab navigation
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            switchTab(tab);
+        });
+    });
+
+    // Sample area selector
+    document.getElementById('area-selector').addEventListener('change', (e) => {
+        app.currentArea = parseInt(e.target.value);
+        updateUI();
+    });
+
+    // Total area input
+    document.getElementById('total-area').addEventListener('change', (e) => {
+        app.totalArea = parseFloat(e.target.value);
+        saveData();
+        updateUI();
+    });
+
+    // Species event listeners will be set up by setupSpeciesEventListeners()
+    setupSpeciesEventListeners();
+
+    // Diameter buttons - Sample
+    document.querySelectorAll('#sample-tab .diameter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!btn.disabled) {
+                selectDiameter('sample', parseInt(btn.dataset.diameter));
+            }
+        });
+    });
+
+    // Diameter buttons - Inventory
+    document.querySelectorAll('#inventory-tab .diameter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!btn.disabled) {
+                addInventoryTree(parseInt(btn.dataset.diameter));
+            }
+        });
+    });
+
+    // Height buttons
+    document.querySelectorAll('.height-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!btn.disabled) {
+                completeSampleTree(parseFloat(btn.dataset.height));
+            }
+        });
+    });
+
+    // Action buttons
+    document.getElementById('clear-inventory').addEventListener('click', clearInventory);
+    document.getElementById('new-project').addEventListener('click', newProject);
+    document.getElementById('export-data').addEventListener('click', exportData);
+    document.getElementById('clear-all').addEventListener('click', clearAll);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        
+        switch(e.key) {
+            case '1':
+                switchTab('sample');
+                break;
+            case '2':
+                switchTab('inventory');
+                break;
+            case '3':
+                switchTab('results');
+                break;
+        }
+    });
+}
+
+// Tab switching
 function switchTab(tabName) {
-    console.log('🔄 switchTab called with:', tabName);
+    console.log('Switching to tab:', tabName);
     
-    // Save current session before switching
-    if (projectManager) {
-        console.log('💾 Saving current session...');
-        projectManager.saveCurrentSession();
-    } else {
-        console.log('⚠️ No projectManager available');
-    }
-    
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    console.log('✅ Hidden all tab contents');
-    
-    // Remove active class from all tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    // Update nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add('active');
+        }
     });
-    console.log('✅ Removed active class from all tab buttons');
+
+    // Update tab content
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
     
-    // Show selected tab content
-    const targetTab = document.getElementById(tabName);
+    const targetTab = document.getElementById(`${tabName}-tab`);
     if (targetTab) {
         targetTab.classList.add('active');
-        console.log('✅ Activated tab:', tabName);
-    } else {
-        console.error('❌ Target tab not found:', tabName);
+        app.currentTab = tabName;
     }
-    
-    // Add active class to the correct button
-    const targetButton = document.querySelector(`[onclick*="switchTab('${tabName}')"]`);
-    if (targetButton) {
-        targetButton.classList.add('active');
-        console.log('✅ Activated button for tab:', tabName);
-    } else {
-        console.error('❌ Target button not found for tab:', tabName);
-    }
-    
-    // Update UI based on current tab
-    console.log('🔄 Updating UI...');
-    updateAllUI();
-    console.log('✅ switchTab completed for:', tabName);
+
+    updateUI();
 }
 
-// Project Management Functions
-async function createNewProject() {
-    const name = prompt('Nome del nuovo progetto:');
-    if (!name) return;
-    
-    const description = prompt('Descrizione (opzionale):') || '';
-    const location = prompt('Località (opzionale):') || '';
-    
-    try {
-        const projectData = {
-            name: name.trim(),
-            description: description.trim(),
-            operator: appState.operatorName,
-            inventoryAreaHa: 30.0,
-            location: location.trim()
-        };
+// Species selection
+function selectSpecies(type, species) {
+    if (type === 'sample') {
+        app.selectedSpeciesSample = species;
         
-        const projectId = await projectManager.createProject(projectData);
-        await projectManager.setCurrentProject(projectId);
-        updateProjectSelector();
-        updateAllUI();
-    } catch (error) {
-        showNotification('❌ Errore nella creazione del progetto', 'error');
-    }
-}
-
-async function switchToProject(projectId) {
-    try {
-        showNotification('🔄 Caricamento progetto...', 'info');
-        await projectManager.setCurrentProject(parseInt(projectId));
-        updateProjectSelector();
-        updateAllUI();
-        showNotification('✅ Progetto caricato con successo!', 'success');
-    } catch (error) {
-        showNotification('❌ Errore nel caricamento del progetto', 'error');
-    }
-}
-
-async function deleteCurrentProject() {
-    if (!projectManager.currentProject) return;
-    
-    const confirmDelete = confirm(`Sei sicuro di voler eliminare il progetto "${projectManager.currentProject.name}"?\n\nQuesta azione eliminerà TUTTI i dati del progetto e non può essere annullata.`);
-    if (!confirmDelete) return;
-    
-    try {
-        await projectManager.deleteProject(projectManager.currentProject.id);
-        updateProjectSelector();
-        updateAllUI();
-    } catch (error) {
-        showNotification('❌ Errore nell\'eliminazione del progetto', 'error');
-    }
-}
-
-async function exportCurrentProject() {
-    if (!projectManager.currentProject) return;
-    
-    const format = confirm('Esportare come JSON (OK) o CSV (Annulla)?') ? 'json' : 'csv';
-    await projectManager.exportProject(projectManager.currentProject.id, format);
-}
-
-async function importProject() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+        // Update UI
+        document.querySelectorAll('#sample-species-buttons .species-btn').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+        const sampleBtn = document.querySelector(`#sample-species-buttons [data-species="${species}"]`);
+        if (sampleBtn) sampleBtn.classList.add('selected');
         
-        try {
-            showNotification('🔄 Importazione in corso...', 'info');
-            await projectManager.importProject(file);
-            updateProjectSelector();
-            updateAllUI();
-        } catch (error) {
-            // Error already handled in project manager
-        }
-    };
-    
-    input.click();
-}
-
-function updateProjectSelector() {
-    const selector = document.getElementById('projectSelector');
-    if (!selector) return;
-    
-    const projects = projectManager.getProjectsForUI();
-    
-    selector.innerHTML = projects.map(project => 
-        `<option value="${project.id}" ${project.isActive ? 'selected' : ''}>
-            ${project.name} (${project.formattedDate})
-        </option>`
-    ).join('');
-}
-
-// Sample Area Functions - Enhanced with database operations
-function selectSampleArea(areaId) {
-    appState.currentSampleArea = areaId;
-    document.getElementById('currentArea').textContent = `Area ${areaId.slice(-1)}`;
-    updateSampleAreaUI();
-}
-
-function selectSpeciesForHeight(species) {
-    appState.selectedSpeciesForHeight = species;
-    
-    // Reset current tree measurement
-    appState.currentSampleTree = null;
-    
-    // Update UI for sample area
-    document.querySelectorAll('#sample-area .species-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    document.querySelector(`#sample-area [data-species="${species}"]`).classList.add('selected');
-    
-    // Enable diameter buttons, disable height buttons until diameter is selected
-    document.querySelectorAll('#sample-area .add-tree-btn').forEach(btn => {
-        btn.disabled = false;
-    });
-    
-    document.querySelectorAll('#sample-area .add-height-btn').forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-    });
-    
-    updateSampleAreaStatus();
-    showNotification(`Specie selezionata: ${SPECIES_CONFIG[species].name}. Ora seleziona il diametro.`, 'info');
-}
-
-function addSampleTree(diameterClass) {
-    if (!appState.selectedSpeciesForHeight) {
-        showNotification('Seleziona prima una specie!', 'error');
-        return;
-    }
-
-    // Create a new tree measurement in progress
-    appState.currentSampleTree = {
-        id: Date.now() + Math.random(),
-        area: appState.currentSampleArea,
-        species: appState.selectedSpeciesForHeight,
-        diameterClass: diameterClass,
-        height: null,
-        needsHeight: true,
-        timestamp: new Date().toISOString(),
-        operator: appState.operatorName,
-        gps: appState.gpsLocation ? {
-            lat: appState.gpsLocation.latitude,
-            lng: appState.gpsLocation.longitude,
-            accuracy: appState.gpsLocation.accuracy
-        } : null
-    };
-
-    // Disable diameter buttons and enable height buttons
-    document.querySelectorAll('#sample-area .add-tree-btn').forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-    });
-    
-    document.querySelectorAll('#sample-area .add-height-btn').forEach(btn => {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.innerHTML = `<span>📏</span><span>Altezza per Ø${diameterClass}cm</span>`;
-    });
-
-    updateSampleAreaStatus();
-    
-    const speciesName = SPECIES_CONFIG[appState.selectedSpeciesForHeight].name;
-    showNotification(`Diametro ${diameterClass}cm registrato per ${speciesName}. Ora misura l'altezza.`, 'info');
-}
-
-async function addHeightMeasurement(height) {
-    if (!appState.currentSampleTree) {
-        showNotification('Seleziona prima il diametro di una pianta!', 'error');
-        return;
-    }
-
-    if (!projectManager.currentProject) {
-        showNotification('❌ Nessun progetto attivo!', 'error');
-        return;
-    }
-
-    try {
-        // Complete the tree measurement
-        appState.currentSampleTree.height = height;
-        appState.currentSampleTree.needsHeight = false;
-        appState.currentSampleTree.heightTimestamp = new Date().toISOString();
-
-        // Save to database
-        await forestDB.addSampleTree(projectManager.currentProject.id, appState.currentSampleTree);
-
-        // Add to local state
-        const currentArea = appState.sampleAreas[appState.currentSampleArea];
-        if (!currentArea.completeTrees) {
-            currentArea.completeTrees = [];
-        }
-        currentArea.completeTrees.push(appState.currentSampleTree);
-
-        // Reset current tree
-        appState.currentSampleTree = null;
-
-        // Re-enable diameter buttons for next tree
-        document.querySelectorAll('#sample-area .add-tree-btn').forEach(btn => {
+        // Enable diameter buttons
+        document.querySelectorAll('#sample-tab .diameter-btn').forEach(btn => {
             btn.disabled = false;
-            btn.style.opacity = '1';
         });
-
-        // Disable height buttons until next diameter
-        document.querySelectorAll('#sample-area .add-height-btn').forEach(btn => {
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.innerHTML = `<span>📏</span><span>Altezza</span>`;
+        
+        // Enable custom diameter button
+        document.getElementById('custom-diameter-sample-btn').disabled = false;
+        
+        showNotification(`Specie selezionata: ${SPECIES[species].name}`, 'info');
+        
+    } else if (type === 'inventory') {
+        app.selectedSpeciesInventory = species;
+        
+        // Update UI
+        document.querySelectorAll('#inventory-species-buttons .species-btn').forEach(btn => {
+            btn.classList.remove('selected');
         });
-
-        // Recalculate averages and save
-        calculateSpeciesHeightAverages();
-        await forestDB.saveHeightAverages(projectManager.currentProject.id, appState.speciesHeightAverages);
+        const inventoryBtn = document.querySelector(`#inventory-species-buttons [data-species="${species}"]`);
+        if (inventoryBtn) inventoryBtn.classList.add('selected');
         
-        updateSampleAreaUI();
-        updateInventoryUI();
+        // Enable diameter buttons
+        document.querySelectorAll('#inventory-tab .diameter-btn.inventory').forEach(btn => {
+            btn.disabled = false;
+        });
         
-        const speciesName = SPECIES_CONFIG[appState.selectedSpeciesForHeight].name;
-        const lastTree = currentArea.completeTrees[currentArea.completeTrees.length - 1];
-        showNotification(`✅ Pianta salvata: ${speciesName} Ø${lastTree.diameterClass}cm H${height}m`, 'success');
+        // Enable custom diameter button
+        document.getElementById('custom-diameter-inventory-btn').disabled = false;
         
-    } catch (error) {
-        console.error('❌ Error adding height measurement:', error);
-        showNotification('❌ Errore nel salvare la pianta', 'error');
+        showNotification(`Specie selezionata: ${SPECIES[species].name}`, 'info');
     }
+
+    updateUI();
 }
 
-// Inventory Functions - Enhanced with database operations
-function selectSpeciesForInventory(species) {
-    appState.selectedSpeciesForInventory = species;
-    
-    // Update UI for inventory
-    document.querySelectorAll('#inventory .species-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    document.querySelector(`#inventory [data-species="${species}"]`).classList.add('selected');
-    
-    // Enable diameter buttons
-    document.querySelectorAll('#inventory .add-tree-btn').forEach(btn => {
-        btn.disabled = false;
-    });
-    
-    showNotification(`Specie selezionata per piedilista: ${SPECIES_CONFIG[species].name}`, 'info');
-}
-
-async function addInventoryTree(diameterClass) {
-    if (!appState.selectedSpeciesForInventory) {
+// Sample tree workflow
+function selectDiameter(type, diameter) {
+    if (!app.selectedSpeciesSample) {
         showNotification('Seleziona prima una specie!', 'error');
         return;
     }
 
-    if (!projectManager.currentProject) {
-        showNotification('❌ Nessun progetto attivo!', 'error');
+    // Create new sample tree
+    app.currentSampleTree = {
+        id: Date.now(),
+        area: app.currentArea,
+        species: app.selectedSpeciesSample,
+        diameter: diameter,
+        height: null,
+        timestamp: new Date()
+    };
+
+    // Show height input
+    document.getElementById('height-input').style.display = 'block';
+    
+    // Disable diameter buttons and custom diameter button
+    document.querySelectorAll('#sample-tab .diameter-btn').forEach(btn => {
+        btn.disabled = true;
+    });
+    
+    const customBtn = document.getElementById('custom-diameter-sample-btn');
+    if (customBtn) customBtn.disabled = true;
+
+    updateSampleStatus(`Diametro ${diameter}cm selezionato. Ora seleziona l'altezza.`, 'info');
+}
+
+function completeSampleTree(height) {
+    if (!app.currentSampleTree) {
+        showNotification('Errore: nessun albero in corso', 'error');
         return;
     }
 
-    try {
-        const inventoryTree = {
-            id: Date.now() + Math.random(),
-            species: appState.selectedSpeciesForInventory,
-            diameterClass: diameterClass,
-            timestamp: new Date().toISOString(),
-            gps: appState.gpsLocation ? {
-                lat: appState.gpsLocation.latitude,
-                lng: appState.gpsLocation.longitude,
-                accuracy: appState.gpsLocation.accuracy
-            } : null,
-            operator: appState.operatorName
-        };
+    // Complete the tree
+    app.currentSampleTree.height = height;
+    app.sampleTrees.push(app.currentSampleTree);
 
-        // Save to database
-        await forestDB.addInventoryTree(projectManager.currentProject.id, inventoryTree);
+    // Calculate averages
+    calculateHeightAverages();
 
-        // Add to local state
-        appState.inventoryTrees.push(inventoryTree);
-        
-        updateInventoryUI();
-        updateResultsUI();
-        
-        const speciesName = SPECIES_CONFIG[appState.selectedSpeciesForInventory].name;
-        showNotification(`✅ Salvata: ${speciesName} - Classe ${diameterClass}cm`, 'success');
-        
-    } catch (error) {
-        console.error('❌ Error adding inventory tree:', error);
-        showNotification('❌ Errore nel salvare la pianta', 'error');
+    // Reset for next tree
+    document.getElementById('height-input').style.display = 'none';
+    document.querySelectorAll('#sample-tab .diameter-btn').forEach(btn => {
+        btn.disabled = false;
+    });
+    
+    // Re-enable custom diameter button if species is selected
+    if (app.selectedSpeciesSample) {
+        const customBtn = document.getElementById('custom-diameter-sample-btn');
+        if (customBtn) customBtn.disabled = false;
     }
+
+    const speciesName = SPECIES[app.currentSampleTree.species].name;
+    showNotification(`✅ Salvato: ${speciesName} Ø${app.currentSampleTree.diameter}cm H${height}m`, 'success');
+
+    app.currentSampleTree = null;
+    saveData();
+    updateUI();
 }
 
-async function updateInventoryArea() {
-    const newArea = parseFloat(document.getElementById('inventoryAreaHa').value);
-    appState.inventoryAreaHa = newArea;
-    
-    // Update project in database
-    if (projectManager.currentProject) {
-        try {
-            await projectManager.updateProject(projectManager.currentProject.id, {
-                inventoryAreaHa: newArea
-            });
-        } catch (error) {
-            console.error('❌ Error updating area:', error);
-        }
+// Inventory tree
+function addInventoryTree(diameter) {
+    if (!app.selectedSpeciesInventory) {
+        showNotification('Seleziona prima una specie!', 'error');
+        return;
     }
+
+    const tree = {
+        id: Date.now(),
+        species: app.selectedSpeciesInventory,
+        diameter: diameter,
+        timestamp: new Date()
+    };
+
+    app.inventoryTrees.push(tree);
     
-    updateInventoryUI();
-    updateResultsUI();
+    const speciesName = SPECIES[app.selectedSpeciesInventory].name;
+    showNotification(`✅ Aggiunto: ${speciesName} Ø${diameter}cm`, 'success');
+
+    saveData();
+    updateUI();
 }
 
-// Calculation Functions - Same as before
-function calculateSpeciesHeightAverages() {
-    appState.speciesHeightAverages = {};
+// Calculations
+function calculateHeightAverages() {
+    app.heightAverages = {};
     
     const speciesHeights = {};
     
-    try {
-        Object.values(appState.sampleAreas).forEach(area => {
-            if (area && Array.isArray(area.completeTrees)) {
-                area.completeTrees.forEach(tree => {
-                    if (tree && tree.height && tree.height > 0 && tree.species) {
-                        if (!speciesHeights[tree.species]) {
-                            speciesHeights[tree.species] = [];
-                        }
-                        speciesHeights[tree.species].push(tree.height);
-                    }
-                });
-            }
-        });
-        
-        Object.entries(speciesHeights).forEach(([species, heights]) => {
-            if (heights.length > 0) {
-                const average = heights.reduce((sum, height) => sum + height, 0) / heights.length;
-                appState.speciesHeightAverages[species] = {
-                    average: average,
-                    count: heights.length,
-                    min: Math.min(...heights),
-                    max: Math.max(...heights)
-                };
-            }
-        });
-        
-        console.log('📊 Height averages calculated:', appState.speciesHeightAverages);
-    } catch (error) {
-        console.error('❌ Error calculating height averages:', error);
-        appState.speciesHeightAverages = {};
-    }
+    app.sampleTrees.forEach(tree => {
+        if (!speciesHeights[tree.species]) {
+            speciesHeights[tree.species] = [];
+        }
+        speciesHeights[tree.species].push(tree.height);
+    });
+
+    Object.entries(speciesHeights).forEach(([species, heights]) => {
+        if (heights.length > 0) {
+            const avg = heights.reduce((sum, h) => sum + h, 0) / heights.length;
+            app.heightAverages[species] = {
+                average: avg,
+                count: heights.length,
+                min: Math.min(...heights),
+                max: Math.max(...heights)
+            };
+        }
+    });
 }
 
-function calculateTreeBasalArea(diameterClass) {
-    const diameter = diameterClass;
-    return Math.PI * Math.pow(diameter / 200, 2);
-}
-
-function calculateTreeVolume(species, diameterClass) {
-    const basalArea = calculateTreeBasalArea(diameterClass);
-    const speciesConfig = SPECIES_CONFIG[species];
+function calculateTreeVolume(species, diameter) {
+    const basalArea = Math.PI * Math.pow(diameter / 200, 2); // m²
+    const speciesData = SPECIES[species];
     
-    if (appState.speciesHeightAverages[species]) {
-        const avgHeight = appState.speciesHeightAverages[species].average;
-        return basalArea * avgHeight * speciesConfig.formFactor;
+    if (!speciesData) return 0;
+    
+    // Use default height from species if available, otherwise try sample averages
+    let height = 0;
+    if (speciesData.defaultHeight) {
+        height = speciesData.defaultHeight;
+    } else if (app.heightAverages[species]) {
+        height = app.heightAverages[species].average;
     }
     
+    if (height > 0) {
+        return basalArea * height * speciesData.formFactor;
+    }
     return 0;
 }
 
-function calculateSampleTreeVolume(species, diameterClass, height) {
-    const basalArea = calculateTreeBasalArea(diameterClass);
-    const speciesConfig = SPECIES_CONFIG[species];
-    return basalArea * height * speciesConfig.formFactor;
-}
-
 function getTotalVolume() {
-    return appState.inventoryTrees.reduce((total, tree) => {
-        return total + calculateTreeVolume(tree.species, tree.diameterClass);
+    return app.inventoryTrees.reduce((total, tree) => {
+        return total + calculateTreeVolume(tree.species, tree.diameter);
     }, 0);
 }
 
 function getTotalBasalArea() {
-    return appState.inventoryTrees.reduce((total, tree) => {
-        return total + calculateTreeBasalArea(tree.diameterClass);
+    return app.inventoryTrees.reduce((total, tree) => {
+        return total + Math.PI * Math.pow(tree.diameter / 200, 2);
     }, 0);
 }
 
-// UI Update Functions - Enhanced
-function updateAllUI() {
+// UI Updates
+function updateUI() {
     updateHeaderStats();
-    updateSampleAreaUI();
-    updateInventoryUI();
-    updateResultsUI();
-    updateProjectInfo();
-}
-
-function updateProjectInfo() {
-    const projectInfo = document.getElementById('projectInfo');
-    if (!projectInfo) return;
-    
-    if (projectManager && projectManager.currentProject) {
-        const project = projectManager.currentProject;
-        projectInfo.innerHTML = `
-            <strong>${project.name}</strong>
-            <small> - ${project.operator} - ${project.inventoryAreaHa} ha</small>
-        `;
-    }
+    updateSampleList();
+    updateInventoryList();
+    updateResults();
 }
 
 function updateHeaderStats() {
-    const allCompleteTrees = Object.values(appState.sampleAreas).reduce((total, area) => {
-        return total + (area.completeTrees ? area.completeTrees.length : 0);
-    }, 0);
-    
-    const speciesWithHeights = Object.keys(appState.speciesHeightAverages).length;
-    const totalVolume = getTotalVolume();
-    
-    document.getElementById('totalSampleTrees').textContent = allCompleteTrees;
-    document.getElementById('totalInventoryTrees').textContent = appState.inventoryTrees.length;
-    document.getElementById('speciesWithHeights').textContent = `${speciesWithHeights}/5`;
-    document.getElementById('totalVolume').textContent = totalVolume.toFixed(1) + ' m³';
+    document.getElementById('sample-count').textContent = app.sampleTrees.length;
+    document.getElementById('inventory-count').textContent = app.inventoryTrees.length;
+    document.getElementById('volume-total').textContent = getTotalVolume().toFixed(1);
 }
 
-// Rest of the UI functions remain the same as in the original app.js
-// [Including updateSampleAreaUI, updateInventoryUI, updateResultsUI, etc.]
-
-// Delete Functions - Enhanced with database operations
-async function deleteSampleTree(treeId) {
-    if (!confirm('Sei sicuro di voler eliminare questa pianta di saggio?')) return;
+function updateSampleList() {
+    const container = document.getElementById('sample-list');
     
-    try {
-        // Remove from database
-        await forestDB.deleteSampleTree(treeId);
-        
-        // Remove from local state
-        Object.values(appState.sampleAreas).forEach(area => {
-            area.completeTrees = area.completeTrees.filter(tree => tree.id != treeId);
-        });
-        
-        // Recalculate averages
-        calculateSpeciesHeightAverages();
-        if (projectManager.currentProject) {
-            await forestDB.saveHeightAverages(projectManager.currentProject.id, appState.speciesHeightAverages);
-        }
-        
-        updateSampleAreaUI();
-        updateInventoryUI();
-        showNotification('✅ Pianta di saggio eliminata', 'success');
-        
-    } catch (error) {
-        console.error('❌ Error deleting sample tree:', error);
-        showNotification('❌ Errore nell\'eliminazione', 'error');
-    }
-}
-
-async function deleteInventoryTree(treeId) {
-    if (!confirm('Sei sicuro di voler eliminare questa pianta dal piedilista?')) return;
-    
-    try {
-        // Remove from database
-        await forestDB.deleteInventoryTree(treeId);
-        
-        // Remove from local state
-        appState.inventoryTrees = appState.inventoryTrees.filter(tree => tree.id != treeId);
-        
-        updateInventoryUI();
-        updateResultsUI();
-        showNotification('✅ Pianta eliminata dal piedilista', 'success');
-        
-    } catch (error) {
-        console.error('❌ Error deleting inventory tree:', error);
-        showNotification('❌ Errore nell\'eliminazione', 'error');
-    }
-}
-
-async function clearInventoryData() {
-    if (appState.inventoryTrees.length === 0) {
-        showNotification('Nessun dato del piedilista da eliminare', 'info');
+    if (app.sampleTrees.length === 0) {
+        container.innerHTML = '<p class="empty">Nessuna pianta di saggio ancora</p>';
         return;
     }
 
-    if (!confirm(`Sei sicuro di voler eliminare tutte le ${appState.inventoryTrees.length} piante del piedilista?`)) return;
-
-    try {
-        // Clear from database
-        if (projectManager.currentProject) {
-            await forestDB.deleteInventoryTreesByProject(projectManager.currentProject.id);
-        }
-        
-        // Clear local state
-        appState.inventoryTrees = [];
-        appState.selectedSpeciesForInventory = null;
-        
-        // Reset UI
-        document.querySelectorAll('#inventory .species-btn').forEach(btn => {
-            btn.classList.remove('selected');
-        });
-        document.querySelectorAll('#inventory .add-tree-btn').forEach(btn => {
-            btn.disabled = true;
-        });
-        
-        updateInventoryUI();
-        updateResultsUI();
-        showNotification('✅ Piedilista pulito', 'success');
-        
-    } catch (error) {
-        console.error('❌ Error clearing inventory:', error);
-        showNotification('❌ Errore nella pulizia', 'error');
-    }
-}
-
-// Complete remaining UI functions
-function updateSampleAreaUI() {
-    const currentArea = appState.sampleAreas[appState.currentSampleArea];
+    const recentTrees = app.sampleTrees.slice(-10).reverse();
     
-    const treeCount = currentArea.completeTrees ? currentArea.completeTrees.length : 0;
-    document.getElementById('sampleTreeCount').textContent = 
-        `${treeCount} pianta${treeCount !== 1 ? 'e' : ''} completa${treeCount !== 1 ? 'e' : ''}`;
-    
-    updateRecentSampleTrees(currentArea.completeTrees || []);
-    updateHeightAveragesDisplay();
-    updateSampleAreaStatus();
-}
-
-function updateRecentSampleTrees(completeTrees) {
-    const container = document.getElementById('recentSampleTrees');
-    
-    if (completeTrees.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                Nessuna pianta completa rilevata ancora.<br>
-                Seleziona una specie e completa diametro + altezza per la prima pianta!
+    container.innerHTML = recentTrees.map(tree => `
+        <div class="tree-item">
+            <div class="tree-info">
+                <div class="tree-species">${SPECIES[tree.species].name}</div>
+                <div class="tree-details">
+                    Ø${tree.diameter}cm × H${tree.height}m • Area ${tree.area}
+                    <br>Volume: ${(Math.PI * Math.pow(tree.diameter / 200, 2) * tree.height * SPECIES[tree.species].formFactor).toFixed(3)} m³
+                </div>
             </div>
-        `;
+            <button class="delete-btn" onclick="deleteSampleTree('${tree.id}')">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function updateInventoryList() {
+    const container = document.getElementById('inventory-list');
+    
+    if (app.inventoryTrees.length === 0) {
+        container.innerHTML = '<p class="empty">Nessuna pianta in piedilista</p>';
         return;
     }
 
-    const recentTrees = completeTrees.slice(-20).reverse();
+    const recentTrees = app.inventoryTrees.slice(-10).reverse();
     
-    const treesHTML = recentTrees.map(tree => {
-        const speciesConfig = SPECIES_CONFIG[tree.species];
-        const timestamp = new Date(tree.timestamp);
-        const gpsText = tree.gps ? 
-            `GPS: ${tree.gps.lat.toFixed(4)}, ${tree.gps.lng.toFixed(4)}` : 
-            'GPS non disponibile';
-        
-        const basalArea = calculateTreeBasalArea(tree.diameterClass);
-        const volume = calculateSampleTreeVolume(tree.species, tree.diameterClass, tree.height);
+    container.innerHTML = recentTrees.map(tree => {
+        const volume = calculateTreeVolume(tree.species, tree.diameter);
+        const volumeText = volume > 0 ? `${volume.toFixed(3)} m³` : 'N/A';
         
         return `
-            <div class="entry-item">
-                <div class="entry-info">
-                    <div class="entry-species">${speciesConfig.name}</div>
-                    <div class="entry-details">
-                        Ø${tree.diameterClass}cm × H${tree.height}m • ${tree.area.toUpperCase()}<br>
-                        Area basim.: ${basalArea.toFixed(4)} m² • Volume: ${volume.toFixed(3)} m³<br>
-                        <small>${gpsText}</small>
-                    </div>
-                    <div class="entry-timestamp">
-                        ${timestamp.toLocaleString()}
+            <div class="tree-item">
+                <div class="tree-info">
+                    <div class="tree-species">${SPECIES[tree.species].name}</div>
+                    <div class="tree-details">
+                        Ø${tree.diameter}cm • Vol: ${volumeText}
                     </div>
                 </div>
-                <button class="delete-btn" onclick="deleteSampleTree('${tree.id}')">
-                    🗑️
-                </button>
+                <button class="delete-btn" onclick="deleteInventoryTree('${tree.id}')">🗑️</button>
             </div>
         `;
     }).join('');
-
-    container.innerHTML = treesHTML;
 }
 
-function updateHeightAveragesDisplay() {
-    const container = document.getElementById('averagesList');
-    
-    if (Object.keys(appState.speciesHeightAverages).length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Nessuna altezza rilevata ancora</p>';
-        return;
-    }
-    
-    const averagesHTML = Object.entries(appState.speciesHeightAverages).map(([species, data]) => {
-        const speciesConfig = SPECIES_CONFIG[species];
-        return `
-            <div class="avg-item">
-                <div class="avg-species">${speciesConfig.name}</div>
-                <div class="avg-height">
-                    ${data.average.toFixed(1)}m 
-                    <small style="color: var(--text-secondary);">(${data.count} campioni)</small>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    container.innerHTML = averagesHTML;
-}
+function updateResults() {
+    // Update stats
+    const totalTrees = app.inventoryTrees.length;
+    const treesPerHa = app.totalArea > 0 ? Math.round(totalTrees / app.totalArea) : 0;
+    const basalArea = getTotalBasalArea();
+    const volume = getTotalVolume();
+    const volumePerHa = app.totalArea > 0 ? volume / app.totalArea : 0;
 
-function updateSampleAreaStatus() {
-    const statusDiv = document.getElementById('sampleAreaStatus') || createSampleAreaStatus();
-    
-    if (appState.currentSampleTree) {
-        statusDiv.innerHTML = `
-            <div style="background: #fef3c7; padding: 1rem; border-radius: 0.75rem; border: 2px solid #f59e0b; margin: 1rem 0;">
-                <h4 style="color: #92400e; margin-bottom: 0.5rem;">🌲 Pianta in Misurazione</h4>
-                <p style="color: #78350f;">
-                    <strong>${SPECIES_CONFIG[appState.currentSampleTree.species].name}</strong><br>
-                    Diametro: ${appState.currentSampleTree.diameterClass}cm<br>
-                    <strong>⏳ Aspettando misurazione altezza...</strong>
-                </p>
-            </div>
-        `;
-    } else {
-        statusDiv.innerHTML = `
-            <div style="background: #f0fdf4; padding: 1rem; border-radius: 0.75rem; border: 2px solid #16a34a; margin: 1rem 0;">
-                <h4 style="color: #15803d; margin-bottom: 0.5rem;">✅ Pronto per Nuova Pianta</h4>
-                <p style="color: #166534;">
-                    ${appState.selectedSpeciesForHeight ? 
-                        `Specie selezionata: <strong>${SPECIES_CONFIG[appState.selectedSpeciesForHeight].name}</strong><br>Clicca su una classe diametrica per iniziare` :
-                        'Seleziona una specie per iniziare il rilevamento'
-                    }
-                </p>
-            </div>
-        `;
-    }
-}
+    document.getElementById('total-trees').textContent = totalTrees;
+    document.getElementById('trees-per-ha').textContent = treesPerHa;
+    document.getElementById('basal-area').textContent = basalArea.toFixed(2);
+    document.getElementById('volume-per-ha').textContent = volumePerHa.toFixed(1);
 
-function createSampleAreaStatus() {
-    const statusDiv = document.createElement('div');
-    statusDiv.id = 'sampleAreaStatus';
-    
-    const speciesSelector = document.querySelector('#sample-area .species-selector');
-    if (speciesSelector) {
-        speciesSelector.parentNode.insertBefore(statusDiv, speciesSelector.nextSibling);
-    }
-    
-    return statusDiv;
-}
-
-function updateInventoryUI() {
-    document.getElementById('inventoryTreeCount').textContent = 
-        `${appState.inventoryTrees.length} pianta${appState.inventoryTrees.length !== 1 ? 'e' : ''}`;
-    
-    updateRecentInventoryTrees();
-    updateSpeciesHeightStatus();
-    updateVolumeWarning();
-}
-
-function updateRecentInventoryTrees() {
-    const container = document.getElementById('recentInventoryTrees');
-    
-    if (appState.inventoryTrees.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                Nessuna pianta del piedilista rilevata ancora.<br>
-                Seleziona una specie e inizia il conteggio!
-            </div>
-        `;
-        return;
-    }
-
-    const recentTrees = appState.inventoryTrees.slice(-20).reverse();
-    
-    const treesHTML = recentTrees.map(tree => {
-        const speciesConfig = SPECIES_CONFIG[tree.species];
-        const timestamp = new Date(tree.timestamp);
-        const gpsText = tree.gps ? 
-            `GPS: ${tree.gps.lat.toFixed(4)}, ${tree.gps.lng.toFixed(4)}` : 
-            'GPS non disponibile';
-        
-        const volume = calculateTreeVolume(tree.species, tree.diameterClass);
-        const volumeText = volume > 0 ? `Vol: ${volume.toFixed(3)} m³` : 'Vol: N/A (no altezza)';
-        
-        return `
-            <div class="entry-item">
-                <div class="entry-info">
-                    <div class="entry-species">${speciesConfig.name}</div>
-                    <div class="entry-details">
-                        Classe ${tree.diameterClass}cm • ${volumeText} • ${gpsText}
-                    </div>
-                    <div class="entry-timestamp">
-                        ${timestamp.toLocaleString()}
-                    </div>
-                </div>
-                <button class="delete-btn" onclick="deleteInventoryTree('${tree.id}')">
-                    🗑️
-                </button>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = treesHTML;
-}
-
-function updateSpeciesHeightStatus() {
-    Object.keys(SPECIES_CONFIG).forEach(species => {
-        const statusElement = document.getElementById(`height-status-${species}`);
-        if (statusElement) {
-            if (appState.speciesHeightAverages[species]) {
-                const avg = appState.speciesHeightAverages[species].average;
-                statusElement.textContent = `✅ H: ${avg.toFixed(1)}m`;
-                statusElement.style.color = '#16a34a';
-            } else {
-                statusElement.textContent = '⚠️ No altezza';
-                statusElement.style.color = '#d97706';
-            }
-        }
-    });
-}
-
-function updateVolumeWarning() {
-    const warningElement = document.getElementById('volumeWarning');
-    
-    const speciesInInventory = [...new Set(appState.inventoryTrees.map(tree => tree.species))];
-    const speciesWithoutHeights = speciesInInventory.filter(species => 
-        !appState.speciesHeightAverages[species]
-    );
-    
-    if (speciesWithoutHeights.length > 0 && appState.inventoryTrees.length > 0) {
-        warningElement.style.display = 'block';
-    } else {
-        warningElement.style.display = 'none';
-    }
-}
-
-function updateResultsUI() {
-    const totalArea = appState.inventoryAreaHa;
-    const totalTrees = appState.inventoryTrees.length;
-    const treesPerHa = totalArea > 0 ? Math.round(totalTrees / totalArea) : 0;
-    const totalBasalArea = getTotalBasalArea();
-    const basalAreaHa = totalArea > 0 ? totalBasalArea / totalArea : 0;
-    const totalVolume = getTotalVolume();
-    const volumeHa = totalArea > 0 ? totalVolume / totalArea : 0;
-
-    document.getElementById('totalAreaHa').textContent = totalArea.toFixed(1) + ' ha';
-    document.getElementById('treesPerHaResult').textContent = treesPerHa;
-    document.getElementById('basalAreaHa').textContent = basalAreaHa.toFixed(2) + ' m²/ha';
-    document.getElementById('volumeHa').textContent = volumeHa.toFixed(1) + ' m³/ha';
-
+    // Update height averages
+    updateHeightAverages();
     updateSpeciesAnalysis();
-    updateHeightAnalysis();
+}
+
+function updateHeightAverages() {
+    const container = document.getElementById('height-averages');
+    
+    if (Object.keys(app.heightAverages).length === 0) {
+        container.innerHTML = '<p class="empty">Nessuna altezza rilevata</p>';
+        return;
+    }
+
+    container.innerHTML = Object.entries(app.heightAverages).map(([species, data]) => `
+        <div class="height-item">
+            <div class="tree-info">
+                <div class="tree-species">${SPECIES[species].name}</div>
+                <div class="tree-details">
+                    Media: ${data.average.toFixed(1)}m (${data.count} campioni)
+                    <br>Range: ${data.min.toFixed(1)} - ${data.max.toFixed(1)}m
+                </div>
+            </div>
+        </div>
+    `).join('');
 }
 
 function updateSpeciesAnalysis() {
-    const container = document.getElementById('speciesAnalysis');
+    const container = document.getElementById('species-analysis');
     
-    if (appState.inventoryTrees.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nessun dato da analizzare ancora</div>';
+    if (app.inventoryTrees.length === 0) {
+        container.innerHTML = '<p class="empty">Nessun dato da analizzare</p>';
         return;
     }
 
-    const speciesStats = {};
-    appState.inventoryTrees.forEach(tree => {
-        if (!speciesStats[tree.species]) {
-            speciesStats[tree.species] = {
-                count: 0,
-                basalArea: 0,
-                volume: 0,
-                diameterClasses: {}
-            };
+    const speciesData = {};
+    
+    app.inventoryTrees.forEach(tree => {
+        if (!speciesData[tree.species]) {
+            speciesData[tree.species] = { count: 0, volume: 0 };
         }
-        speciesStats[tree.species].count++;
-        speciesStats[tree.species].basalArea += calculateTreeBasalArea(tree.diameterClass);
-        speciesStats[tree.species].volume += calculateTreeVolume(tree.species, tree.diameterClass);
-        
-        if (!speciesStats[tree.species].diameterClasses[tree.diameterClass]) {
-            speciesStats[tree.species].diameterClasses[tree.diameterClass] = 0;
-        }
-        speciesStats[tree.species].diameterClasses[tree.diameterClass]++;
+        speciesData[tree.species].count++;
+        speciesData[tree.species].volume += calculateTreeVolume(tree.species, tree.diameter);
     });
 
-    const analysisHTML = Object.entries(speciesStats).map(([species, stats]) => {
-        const speciesConfig = SPECIES_CONFIG[species];
-        const percentage = ((stats.count / appState.inventoryTrees.length) * 100).toFixed(1);
-        const hasHeight = appState.speciesHeightAverages[species] ? '✅' : '⚠️';
-        const avgHeight = appState.speciesHeightAverages[species] ? 
-            appState.speciesHeightAverages[species].average.toFixed(1) + 'm' : 'N/A';
-        
-        const diameterDistribution = Object.entries(stats.diameterClasses)
-            .map(([diam, count]) => `${count}×${diam}cm`)
-            .join(', ');
+    container.innerHTML = Object.entries(speciesData).map(([species, data]) => {
+        const percentage = ((data.count / app.inventoryTrees.length) * 100).toFixed(1);
+        const hasHeight = app.heightAverages[species] ? '✅' : '⚠️';
         
         return `
-            <div class="entry-item">
-                <div class="entry-info">
-                    <div class="entry-species">${hasHeight} ${speciesConfig.name}</div>
-                    <div class="entry-details">
-                        ${stats.count} piante (${percentage}%) • H media: ${avgHeight}<br>
-                        Area basim.: ${stats.basalArea.toFixed(2)} m² • Volume: ${stats.volume.toFixed(1)} m³<br>
-                        <small>Distribuzione: ${diameterDistribution}</small>
+            <div class="species-item">
+                <div class="tree-info">
+                    <div class="tree-species">${hasHeight} ${SPECIES[species].name}</div>
+                    <div class="tree-details">
+                        ${data.count} piante (${percentage}%) • Volume: ${data.volume.toFixed(1)} m³
                     </div>
                 </div>
             </div>
         `;
     }).join('');
-
-    container.innerHTML = analysisHTML;
 }
 
-function updateHeightAnalysis() {
-    const container = document.getElementById('heightAnalysis');
+function updateSampleStatus(message, type) {
+    const container = document.getElementById('sample-status');
+    container.className = `status-message ${type}`;
+    container.textContent = message;
+}
+
+// Delete functions
+function deleteSampleTree(treeId) {
+    if (!confirm('Eliminare questa pianta di saggio?')) return;
     
-    if (Object.keys(appState.speciesHeightAverages).length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nessuna area di saggio rilevata ancora</div>';
-        return;
-    }
-
-    const analysisHTML = Object.entries(appState.speciesHeightAverages).map(([species, data]) => {
-        const speciesConfig = SPECIES_CONFIG[species];
-        
-        return `
-            <div class="entry-item">
-                <div class="entry-info">
-                    <div class="entry-species">${speciesConfig.name}</div>
-                    <div class="entry-details">
-                        Media: ${data.average.toFixed(1)}m • Min: ${data.min.toFixed(1)}m • Max: ${data.max.toFixed(1)}m<br>
-                        Campioni: ${data.count} altezze misurate
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = analysisHTML;
+    app.sampleTrees = app.sampleTrees.filter(tree => tree.id != treeId);
+    calculateHeightAverages();
+    saveData();
+    updateUI();
+    showNotification('Pianta eliminata', 'success');
 }
 
-// GPS and Location Functions
-function startGeoLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-            position => {
-                appState.gpsLocation = {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    timestamp: new Date()
-                };
-                console.log('📍 GPS aggiornato:', appState.gpsLocation);
-            },
-            error => {
-                console.error('❌ GPS Error:', error);
-                showNotification('GPS non disponibile - Continua senza geolocalizzazione', 'info');
-            },
-            { 
-                enableHighAccuracy: true, 
-                maximumAge: 30000, 
-                timeout: 10000 
-            }
-        );
-    } else {
-        console.warn('Geolocation non supportata');
-        showNotification('Geolocalizzazione non supportata dal browser', 'info');
-    }
-}
-
-// Offline Detection
-function setupOfflineDetection() {
-    window.addEventListener('online', () => {
-        appState.isOnline = true;
-        updateConnectionStatus();
-        showNotification('Connessione ripristinata!', 'success');
-    });
+function deleteInventoryTree(treeId) {
+    if (!confirm('Eliminare questa pianta dalla piedilista?')) return;
     
-    window.addEventListener('offline', () => {
-        appState.isOnline = false;
-        updateConnectionStatus();
-        showNotification('Modalità offline attiva', 'info');
-    });
-    
-    updateConnectionStatus();
+    app.inventoryTrees = app.inventoryTrees.filter(tree => tree.id != treeId);
+    saveData();
+    updateUI();
+    showNotification('Pianta eliminata', 'success');
 }
 
-function updateConnectionStatus() {
-    const statusElement = document.getElementById('connectionStatus');
-    const iconElement = document.getElementById('statusIcon');
-    const textElement = document.getElementById('statusText');
-
-    if (appState.isOnline) {
-        statusElement.className = 'status-item status-online';
-        iconElement.textContent = '🟢';
-        textElement.textContent = 'Online';
-    } else {
-        statusElement.className = 'status-item status-offline';
-        iconElement.textContent = '🔴';
-        textElement.textContent = 'Offline';
-    }
-}
-
-// Event Listeners Setup
-function setupEventListeners() {
-    document.addEventListener('keydown', (event) => {
-        if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') return;
-        
-        if (event.key === '1') switchTab('sample-area');
-        if (event.key === '2') switchTab('inventory');
-        if (event.key === '3') switchTab('results');
-        
-        if (event.ctrlKey && event.key === 's') {
-            event.preventDefault();
-            exportCurrentProject();
-        }
-        if (event.ctrlKey && event.key === 'e') {
-            event.preventDefault();
-            exportAllData();
-        }
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            console.log('App in background - Saving state...');
-            if (projectManager) {
-                projectManager.saveCurrentSession();
-            }
-        } else {
-            console.log('App restored - Updating UI...');
-            updateAllUI();
-        }
-    });
-
-    window.addEventListener('beforeunload', (event) => {
-        if (projectManager) {
-            projectManager.saveCurrentSession();
-        }
-    });
-}
-
-// Export Functions
-async function exportAllData() {
-    if (!projectManager || !projectManager.currentProject) {
-        showNotification('❌ Nessun progetto attivo da esportare', 'error');
+// Action functions
+function clearInventory() {
+    if (app.inventoryTrees.length === 0) {
+        showNotification('Piedilista già vuota', 'info');
         return;
     }
     
-    await exportCurrentProject();
+    if (!confirm(`Eliminare tutte le ${app.inventoryTrees.length} piante della piedilista?`)) return;
+    
+    app.inventoryTrees = [];
+    app.selectedSpeciesInventory = null;
+    
+    // Reset UI
+    document.querySelectorAll('#inventory-species-buttons .species-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    document.querySelectorAll('#inventory-tab .diameter-btn').forEach(btn => {
+        btn.disabled = true;
+    });
+    
+    // Disable custom diameter button
+    const customBtn = document.getElementById('custom-diameter-inventory-btn');
+    if (customBtn) customBtn.disabled = true;
+    
+    saveData();
+    updateUI();
+    showNotification('Piedilista pulita', 'success');
 }
 
-// Optional Google Sheets sync function
-async function saveToGoogleSheetsOptional() {
-    if (!projectManager || !projectManager.currentProject) {
-        showNotification('❌ Nessun progetto attivo da sincronizzare', 'error');
-        return;
-    }
+function newProject() {
+    if (!confirm('Tornare alla selezione progetti? I dati non salvati verranno persi.')) return;
+    
+    switchToProjectScreen();
+}
 
-    if (GOOGLE_APPS_SCRIPT_URL === 'IL_TUO_URL_QUI') {
-        showNotification('⚠️ URL Google Apps Script non configurato', 'warning');
-        return;
-    }
-
-    if (!appState.isOnline) {
-        showNotification('❌ Connessione Internet richiesta per Google Sheets', 'error');
-        return;
-    }
-
-    const confirmSync = confirm('Sincronizzare i dati del progetto corrente con Google Sheets?\n\nQuesta operazione invierà tutti i dati del progetto al foglio di calcolo.');
-    if (!confirmSync) return;
-
-    try {
-        showNotification('🔄 Sincronizzazione con Google Sheets...', 'info');
-
-        // Get project data
-        const projectData = await forestDB.exportProject(projectManager.currentProject.id);
-        
-        // Prepare data for Google Sheets (same format as before)
-        const dataToSave = {
-            timestamp: new Date().toISOString(),
-            operator: projectData.project.operator,
-            inventoryAreaHa: projectData.project.inventoryAreaHa,
-            totalSampleTrees: projectData.sampleTrees.length,
-            totalInventoryTrees: projectData.inventoryTrees.length,
+function exportData() {
+    const data = {
+        timestamp: new Date().toISOString(),
+        totalArea: app.totalArea,
+        sampleTrees: app.sampleTrees,
+        inventoryTrees: app.inventoryTrees,
+        heightAverages: app.heightAverages,
+        statistics: {
+            totalTrees: app.inventoryTrees.length,
+            treesPerHa: app.totalArea > 0 ? Math.round(app.inventoryTrees.length / app.totalArea) : 0,
             totalVolume: getTotalVolume(),
-            speciesHeightAverages: projectData.heightAverages,
-            sampleTrees: projectData.sampleTrees,
-            heightMeasurements: projectData.sampleTrees.map(tree => ({
-                id: tree.id + '_height',
-                area: tree.area,
-                species: tree.species,
-                height: tree.height,
-                timestamp: tree.timestamp,
-                operator: tree.operator,
-                gps: tree.gps
-            })),
-            inventoryTrees: projectData.inventoryTrees,
-            projectInfo: {
-                name: projectData.project.name,
-                description: projectData.project.description,
-                location: projectData.project.location
-            },
-            isOptionalSync: true
-        };
-
-        // Use the improved form submission with better timeout handling
-        const result = await submitViaFormImproved(dataToSave);
-        
-        if (result) {
-            showNotification('✅ Dati sincronizzati con Google Sheets!', 'success');
+            volumePerHa: app.totalArea > 0 ? getTotalVolume() / app.totalArea : 0,
+            basalArea: getTotalBasalArea()
         }
+    };
 
-    } catch (error) {
-        console.error('❌ Error syncing with Google Sheets:', error);
-        
-        if (error.message.includes('Timeout') || error.message.includes('timeout')) {
-            showNotification('⚠️ Connessione lenta: i dati potrebbero essere sincronizzati. Controlla Google Sheets.', 'warning');
-        } else {
-            showNotification(`❌ Errore sincronizzazione: ${error.message}`, 'error');
-        }
-    }
-}
-
-// Improved form submission for Google Sheets (same as before but renamed)
-function submitViaFormImproved(data) {
-    return new Promise((resolve, reject) => {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = GOOGLE_APPS_SCRIPT_URL;
-        form.target = 'hidden_iframe';
-        form.style.display = 'none';
-        
-        const iframe = document.createElement('iframe');
-        iframe.name = 'hidden_iframe';
-        iframe.style.display = 'none';
-        
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'data';
-        input.value = JSON.stringify(data);
-        
-        form.appendChild(input);
-        document.body.appendChild(form);
-        document.body.appendChild(iframe);
-        
-        let isResolved = false;
-        
-        // Increased timeout to 30 seconds for slow connections
-        const timeout = setTimeout(() => {
-            if (!isResolved) {
-                console.log('⏰ Timeout raggiunto, ma i dati potrebbero essere ancora in fase di invio...');
-                showNotification('Invio in corso... Connessione lenta rilevata. I dati verranno salvati.', 'info');
-                
-                // Give more time for slow connections
-                setTimeout(() => {
-                    if (!isResolved) {
-                        cleanup();
-                        reject(new Error('Timeout prolungato: operazione non completata in 50 secondi'));
-                    }
-                }, 20000); // Additional 20 seconds = 50 seconds total
-            }
-        }, 30000);
-        
-        iframe.onload = function() {
-            if (!isResolved) {
-                isResolved = true;
-                clearTimeout(timeout);
-                cleanup();
-                resolve(true);
-            }
-        };
-        
-        iframe.onerror = function() {
-            if (!isResolved) {
-                isResolved = true;
-                clearTimeout(timeout);
-                cleanup();
-                reject(new Error('Errore di connessione con Google Sheets'));
-            }
-        };
-        
-        function cleanup() {
-            if (form.parentNode) form.parentNode.removeChild(form);
-            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        }
-        
-        form.submit();
-        console.log('📤 Form inviato a Google Sheets, attesa risposta...');
-    });
-}
-
-// Generate Report Function
-async function generateReport() {
-    if (!projectManager || !projectManager.currentProject) {
-        showNotification('❌ Nessun progetto attivo per il report', 'error');
-        return;
-    }
-
-    try {
-        const projectData = await forestDB.exportProject(projectManager.currentProject.id);
-        const project = projectData.project;
-        
-        const stats = await projectManager.getProjectStats(project.id);
-        
-        const reportHTML = `
-            <h2>📊 Report Rilevamento Forestale</h2>
-            <h3>Progetto: ${project.name}</h3>
-            <hr>
-            <p><strong>Operatore:</strong> ${project.operator}</p>
-            <p><strong>Data:</strong> ${new Date().toLocaleDateString('it-IT')}</p>
-            <p><strong>Località:</strong> ${project.location || 'Non specificata'}</p>
-            <p><strong>Area Totale:</strong> ${project.inventoryAreaHa} ha</p>
-            <hr>
-            
-            <h3>Riassunto Dati:</h3>
-            <ul>
-                <li>Piante di Saggio: ${stats.sampleTrees}</li>
-                <li>Piante Piedilista: ${stats.inventoryTrees}</li>
-                <li>Specie con Altezze: ${stats.speciesWithHeights}/5</li>
-                <li>Volume Totale: ${stats.totalVolume.toFixed(1)} m³</li>
-                <li>Volume per Ettaro: ${stats.volumePerHa.toFixed(1)} m³/ha</li>
-                <li>Area Basimetrica: ${stats.totalBasalArea.toFixed(2)} m²</li>
-                <li>Area Basimetrica per Ettaro: ${stats.basalAreaPerHa.toFixed(2)} m²/ha</li>
-                <li>Piante per Ettaro: ${stats.treesPerHa}</li>
-            </ul>
-            
-            <h3>Altezze Medie:</h3>
-            <ul>
-                ${Object.entries(projectData.heightAverages).map(([species, data]) => 
-                    `<li>${SPECIES_CONFIG[species].name}: ${data.average.toFixed(1)}m (${data.count} campioni)</li>`
-                ).join('')}
-            </ul>
-            
-            <hr>
-            <p><em>Report generato da ForestApp Pro v2.0 il ${new Date().toLocaleString('it-IT')}</em></p>
-        `;
-
-        // Open report in new window
-        const reportWindow = window.open('', '_blank');
-        reportWindow.document.write(`
-            <html>
-            <head>
-                <title>Report Forestale - ${project.name}</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-                    h2, h3 { color: #16a34a; }
-                    hr { border: 1px solid #e2e8f0; margin: 20px 0; }
-                    ul { padding-left: 20px; }
-                    li { margin: 5px 0; }
-                </style>
-            </head>
-            <body>
-                ${reportHTML}
-            </body>
-            </html>
-        `);
-        reportWindow.document.close();
-        
-        showNotification('📊 Report generato in nuova finestra!', 'success');
-        
-    } catch (error) {
-        console.error('❌ Error generating report:', error);
-        showNotification('❌ Errore nella generazione del report', 'error');
-    }
-}
-
-// Utility Functions
-function initializeApp() {
-    console.log('🌲 ForestApp Pro v2 initialized');
-    console.log('📱 PWA Ready with IndexedDB');
-    console.log('🔧 Version: 2.0.0 - Multi-Project');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `forestapp-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
     
-    if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        console.log('📱 Mobile device detected');
-        document.body.classList.add('mobile-device');
-    }
-    
-    if ('performance' in window) {
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const loadTime = performance.now();
-                console.log(`⚡ App loaded in ${loadTime.toFixed(2)}ms`);
-            }, 0);
-        });
-    }
+    showNotification('Dati esportati', 'success');
 }
 
+function clearAll() {
+    if (!confirm('ATTENZIONE: Questa operazione eliminerà TUTTI i dati.\nSei sicuro di voler continuare?')) return;
+    
+    localStorage.removeItem('forestapp-data');
+    newProject();
+    showNotification('Tutti i dati eliminati', 'success');
+}
+
+// Data persistence
+function saveData() {
+    // Save current project data to projects array
+    saveProjects();
+}
+
+function loadData() {
+    // Data is now loaded through projects system
+    // This function is kept for compatibility
+}
+
+// Notifications
 function showNotification(message, type = 'info') {
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
     
-    console.log(`🔔 [${type.toUpperCase()}] ${message}`);
+    document.getElementById('notifications').appendChild(notification);
     
-    const container = document.getElementById('notifications');
-    if (!container) {
-        console.error('Notification container not found');
+    // Show animation
+    setTimeout(() => notification.classList.add('show'), 100);
+    
+    // Hide after delay
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, type === 'error' ? 5000 : 3000);
+}
+
+// Project Management Functions
+function setupProjectEventListeners() {
+    // New project button
+    document.getElementById('new-project-btn').addEventListener('click', showNewProjectForm);
+    
+    // Create project button
+    document.getElementById('create-project-btn').addEventListener('click', createNewProject);
+    
+    // Cancel project button
+    document.getElementById('cancel-project-btn').addEventListener('click', hideNewProjectForm);
+    
+    // Species input in project form
+    document.getElementById('add-species-to-project-btn').addEventListener('click', addSpeciesToProject);
+    document.getElementById('new-species-name').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addSpeciesToProject();
+    });
+    
+    // Emoji selectors
+    setupEmojiSelector('emoji-btn', 'emoji-dropdown');
+    setupEmojiSelector('modal-emoji-btn', 'modal-emoji-dropdown');
+    setupEmojiSelector('modify-emoji-btn', 'modify-emoji-dropdown');
+    
+    // Species modal
+    document.getElementById('save-species-btn').addEventListener('click', saveNewSpecies);
+    document.getElementById('cancel-species-btn').addEventListener('click', hideSpeciesModal);
+    
+    // Species management modals
+    document.getElementById('cancel-management-btn').addEventListener('click', hideSpeciesManagementModal);
+    document.getElementById('save-modify-species-btn').addEventListener('click', saveModifiedSpecies);
+    document.getElementById('cancel-modify-species-btn').addEventListener('click', hideModifySpeciesModal);
+    
+    // Custom diameter modal
+    document.getElementById('save-custom-diameter-btn').addEventListener('click', saveCustomDiameter);
+    document.getElementById('cancel-custom-diameter-btn').addEventListener('click', hideCustomDiameterModal);
+    
+    // Initialize emoji dropdowns
+    initializeEmojiDropdowns();
+}
+
+function showNewProjectForm() {
+    document.getElementById('new-project-form').style.display = 'block';
+    document.getElementById('project-name-input').focus();
+}
+
+function hideNewProjectForm() {
+    document.getElementById('new-project-form').style.display = 'none';
+    document.getElementById('project-name-input').value = '';
+    document.getElementById('project-area-input').value = '30';
+    document.getElementById('new-species-name').value = '';
+    document.getElementById('new-species-factor').value = '0.5';
+    document.getElementById('new-species-height').value = '15';
+    document.getElementById('emoji-btn').textContent = '🌲';
+    projectSpeciesList = [];
+    updateProjectSpeciesList();
+}
+
+function createNewProject() {
+    const nameInput = document.getElementById('project-name-input');
+    const areaInput = document.getElementById('project-area-input');
+    
+    const name = nameInput.value.trim();
+    const area = parseFloat(areaInput.value);
+    
+    if (!name) {
+        showNotification('Inserisci un nome per il progetto', 'error');
+        nameInput.focus();
         return;
     }
     
-    container.appendChild(notification);
+    if (!area || area <= 0) {
+        showNotification('Inserisci un\'area valida', 'error');
+        areaInput.focus();
+        return;
+    }
     
-    setTimeout(() => notification.classList.add('show'), 100);
+    if (projectSpeciesList.length === 0) {
+        showNotification('Aggiungi almeno una specie al progetto', 'error');
+        document.getElementById('new-species-name').focus();
+        return;
+    }
     
-    const hideDelay = type === 'error' ? 6000 : 4000;
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, hideDelay);
-}
-
-// Performance optimization
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
+    // Convert species list to species object
+    const selectedSpecies = {};
+    projectSpeciesList.forEach(species => {
+        selectedSpecies[species.id] = {
+            name: species.name,
+            icon: species.icon,
+            formFactor: species.formFactor,
+            defaultHeight: species.defaultHeight
         };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-const debouncedUpdateUI = debounce(updateAllUI, 150);
-
-// Debug function to test button functionality
-function debugButtonSetup() {
-    console.log('🔧 Setting up button debugging...');
-    
-    // Check if tab buttons exist
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    console.log('🔍 Found tab buttons:', tabButtons.length);
-    
-    tabButtons.forEach((btn, index) => {
-        const onclick = btn.getAttribute('onclick');
-        console.log(`🔍 Button ${index + 1} onclick:`, onclick);
-        
-        // Add a test click listener
-        btn.addEventListener('click', function(e) {
-            console.log('🖱️ Button clicked!', onclick);
-            console.log('🔍 switchTab function available:', typeof window.switchTab);
-        });
     });
     
-    // Test if we can manually call switchTab
-    try {
-        console.log('🧪 Testing switchTab function directly...');
-        if (typeof window.switchTab === 'function') {
-            console.log('✅ switchTab is available as function');
-        } else {
-            console.error('❌ switchTab is not available:', typeof window.switchTab);
-        }
-    } catch (error) {
-        console.error('❌ Error testing switchTab:', error);
+    const project = {
+        id: Date.now(),
+        name: name,
+        area: area,
+        created: new Date(),
+        lastModified: new Date(),
+        species: selectedSpecies,
+        sampleTrees: [],
+        inventoryTrees: [],
+        heightAverages: {}
+    };
+    
+    app.projects.push(project);
+    app.currentProject = project;
+    
+    // Initialize app with project data
+    app.totalArea = area;
+    app.sampleTrees = [];
+    app.inventoryTrees = [];
+    app.heightAverages = {};
+    app.selectedSpeciesSample = null;
+    app.selectedSpeciesInventory = null;
+    app.currentSampleTree = null;
+    SPECIES = { ...selectedSpecies };
+    
+    saveProjects();
+    switchToMainApp();
+    
+    showNotification(`Progetto \"${name}\" creato!`, 'success');
+}
+
+function loadProject(projectId) {
+    const project = app.projects.find(p => p.id === projectId);
+    if (!project) {
+        showNotification('Progetto non trovato', 'error');
+        return;
+    }
+    
+    app.currentProject = project;
+    app.totalArea = project.area;
+    app.sampleTrees = project.sampleTrees || [];
+    app.inventoryTrees = project.inventoryTrees || [];
+    app.heightAverages = project.heightAverages || {};
+    app.selectedSpeciesSample = null;
+    app.selectedSpeciesInventory = null;
+    app.currentSampleTree = null;
+    
+    // Load project species
+    SPECIES = project.species || {};
+    
+    // Update last modified
+    project.lastModified = new Date();
+    saveProjects();
+    
+    switchToMainApp();
+    
+    showNotification(`Progetto "${project.name}" caricato!`, 'success');
+}
+
+function deleteProject(projectId) {
+    const project = app.projects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    if (!confirm(`Eliminare il progetto "${project.name}"?\\nQuesta operazione è irreversibile.`)) return;
+    
+    app.projects = app.projects.filter(p => p.id !== projectId);
+    saveProjects();
+    updateProjectsUI();
+    
+    showNotification(`Progetto "${project.name}" eliminato`, 'success');
+}
+
+function switchToMainApp() {
+    document.getElementById('project-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    
+    generateSpeciesButtons();
+    setupEventListeners();
+    updateProjectNameInHeader();
+    updateUI();
+}
+
+function switchToProjectScreen() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('project-screen').style.display = 'block';
+    updateProjectsUI();
+}
+
+function updateProjectNameInHeader() {
+    if (app.currentProject) {
+        document.getElementById('project-name').textContent = app.currentProject.name;
     }
 }
 
-// Global error handlers
-window.addEventListener('error', (event) => {
-    console.error('🚨 Global error:', event.error);
-    if (typeof showNotification === 'function') {
-        showNotification('Si è verificato un errore. Controlla la console per dettagli.', 'error');
+function updateProjectsUI() {
+    const container = document.getElementById('projects-list');
+    
+    if (app.projects.length === 0) {
+        container.innerHTML = '<p class="empty">Nessun progetto salvato</p>';
+        return;
     }
-});
+    
+    const sortedProjects = [...app.projects].sort((a, b) => 
+        new Date(b.lastModified) - new Date(a.lastModified)
+    );
+    
+    container.innerHTML = sortedProjects.map(project => {
+        const lastModified = new Date(project.lastModified).toLocaleDateString('it-IT');
+        const totalTrees = (project.sampleTrees?.length || 0) + (project.inventoryTrees?.length || 0);
+        
+        return `
+            <div class="project-item" onclick="loadProject(${project.id})">
+                <div class="project-info">
+                    <div class="project-name">${project.name}</div>
+                    <div class="project-details">
+                        Area: ${project.area} ha • ${totalTrees} piante • Modificato: ${lastModified}
+                    </div>
+                </div>
+                <div class="project-actions-item">
+                    <button class="btn-sm btn-danger-sm" onclick="event.stopPropagation(); deleteProject(${project.id})">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('🚨 Unhandled promise rejection:', event.reason);
-    if (typeof showNotification === 'function') {
-        showNotification('Errore di connessione. Riprova più tardi.', 'error');
+function saveProjects() {
+    localStorage.setItem('forestapp-projects', JSON.stringify(app.projects));
+    
+    // Update current project data if active
+    if (app.currentProject) {
+        const project = app.projects.find(p => p.id === app.currentProject.id);
+        if (project) {
+            project.sampleTrees = app.sampleTrees;
+            project.inventoryTrees = app.inventoryTrees;
+            project.heightAverages = app.heightAverages;
+            project.species = SPECIES;
+            project.lastModified = new Date();
+            localStorage.setItem('forestapp-projects', JSON.stringify(app.projects));
+        }
     }
-});
+}
 
-// Make functions globally available for onclick handlers
-console.log('🔄 Exposing functions globally...');
+function loadProjects() {
+    try {
+        const saved = localStorage.getItem('forestapp-projects');
+        if (saved) {
+            app.projects = JSON.parse(saved);
+        }
+    } catch (error) {
+        console.error('Error loading projects:', error);
+        showNotification('Errore nel caricamento progetti', 'warning');
+        app.projects = [];
+    }
+}
 
-window.switchTab = switchTab;
-console.log('✅ window.switchTab =', typeof window.switchTab);
+// Emoji and Species Management Functions
+function initializeEmojiDropdowns() {
+    populateEmojiDropdown('emoji-dropdown');
+    populateEmojiDropdown('modal-emoji-dropdown');
+    populateEmojiDropdown('modify-emoji-dropdown');
+}
 
-window.selectSpeciesForHeight = selectSpeciesForHeight;
-window.selectSpeciesForInventory = selectSpeciesForInventory;
-window.addSampleTree = addSampleTree;
-window.addInventoryTree = addInventoryTree;
-window.addHeightMeasurement = addHeightMeasurement;
-window.switchToProject = switchToProject;
-window.selectSampleArea = selectSampleArea;
-window.updateInventoryArea = updateInventoryArea;
-window.clearInventoryData = clearInventoryData;
-window.createNewProject = createNewProject;
-window.exportCurrentProject = exportCurrentProject;
-window.importProject = importProject;
-window.deleteCurrentProject = deleteCurrentProject;
-window.exportAllData = exportAllData;
-window.generateReport = generateReport;
-window.saveToGoogleSheetsOptional = saveToGoogleSheetsOptional;
+function populateEmojiDropdown(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
+    dropdown.innerHTML = '';
+    
+    Object.entries(EMOJI_OPTIONS).forEach(([category, emojis]) => {
+        const categoryLabel = document.createElement('div');
+        categoryLabel.className = 'emoji-category';
+        categoryLabel.textContent = getCategoryName(category);
+        dropdown.appendChild(categoryLabel);
+        
+        emojis.forEach(emoji => {
+            const button = document.createElement('button');
+            button.className = 'emoji-option';
+            button.textContent = emoji;
+            button.addEventListener('click', () => selectEmoji(dropdownId, emoji));
+            dropdown.appendChild(button);
+        });
+    });
+}
 
-console.log('✅ All functions exposed globally');
-console.log('🔍 Testing switchTab availability:', typeof switchTab);
-console.log('🔍 Testing window.switchTab availability:', typeof window.switchTab);
+function getCategoryName(category) {
+    const names = {
+        'conifers': 'Conifere',
+        'deciduous': 'Latifoglie', 
+        'colored': 'Colori',
+        'special': 'Speciali'
+    };
+    return names[category] || category;
+}
 
-console.log('🎯 ForestApp Pro v2 - IndexedDB Multi-Project version loaded successfully!');
+function setupEmojiSelector(btnId, dropdownId) {
+    const btn = document.getElementById(btnId);
+    const dropdown = document.getElementById(dropdownId);
+    
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        dropdown.style.display = dropdown.style.display === 'none' ? 'grid' : 'none';
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+}
+
+function selectEmoji(dropdownId, emoji) {
+    const btnId = dropdownId.replace('-dropdown', '-btn');
+    const btn = document.getElementById(btnId);
+    btn.textContent = emoji;
+    document.getElementById(dropdownId).style.display = 'none';
+}
+
+function addSpeciesToProject() {
+    const nameInput = document.getElementById('new-species-name');
+    const factorInput = document.getElementById('new-species-factor');
+    const heightInput = document.getElementById('new-species-height');
+    const iconBtn = document.getElementById('emoji-btn');
+    
+    const name = nameInput.value.trim();
+    const formFactor = parseFloat(factorInput.value);
+    const defaultHeight = parseFloat(heightInput.value);
+    const icon = iconBtn.textContent;
+    
+    if (!name) {
+        showNotification('Inserisci il nome della specie', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!formFactor || formFactor <= 0 || formFactor > 1) {
+        showNotification('Inserisci un fattore di forma valido (0.1 - 1.0)', 'error');
+        factorInput.focus();
+        return;
+    }
+    
+    if (!defaultHeight || defaultHeight <= 0 || defaultHeight > 50) {
+        showNotification('Inserisci un\'altezza valida (0.5 - 50m)', 'error');
+        heightInput.focus();
+        return;
+    }
+    
+    const speciesId = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    
+    // Check if species already exists
+    if (projectSpeciesList.find(s => s.id === speciesId)) {
+        showNotification('Una specie con questo nome esiste già', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    const species = {
+        id: speciesId,
+        name: name,
+        icon: icon,
+        formFactor: formFactor,
+        defaultHeight: defaultHeight
+    };
+    
+    projectSpeciesList.push(species);
+    updateProjectSpeciesList();
+    
+    // Clear inputs
+    nameInput.value = '';
+    factorInput.value = '0.5';
+    heightInput.value = '15';
+    iconBtn.textContent = '🌲';
+    
+    showNotification(`Specie "${name}" aggiunta`, 'success');
+}
+
+function updateProjectSpeciesList() {
+    const container = document.getElementById('project-species-list');
+    
+    if (projectSpeciesList.length === 0) {
+        container.innerHTML = '<p class="empty">Nessuna specie aggiunta. Inizia aggiungendo le prime specie.</p>';
+        return;
+    }
+    
+    container.innerHTML = projectSpeciesList.map(species => `
+        <div class="species-item">
+            <div class="species-item-info">
+                <div class="species-item-name">${species.icon} ${species.name}</div>
+                <div class="species-item-details">Fattore: ${species.formFactor} • Altezza: ${species.defaultHeight}m</div>
+            </div>
+            <button class="btn-sm btn-danger-sm" onclick="removeSpeciesFromProject('${species.id}')">
+                🗑️
+            </button>
+        </div>
+    `).join('');
+}
+
+function removeSpeciesFromProject(speciesId) {
+    projectSpeciesList = projectSpeciesList.filter(s => s.id !== speciesId);
+    updateProjectSpeciesList();
+    showNotification('Specie rimossa', 'success');
+}
+
+// Legacy Species Management Functions (kept for compatibility)
+function removeCustomSpecies(button) {
+    button.closest('.species-checkbox').remove();
+}
+
+function showAddSpeciesModal(type) {
+    app.addingSpeciesFor = type;
+    document.getElementById('species-modal').style.display = 'flex';
+    document.getElementById('modal-species-name').focus();
+}
+
+function hideSpeciesModal() {
+    document.getElementById('species-modal').style.display = 'none';
+    document.getElementById('modal-species-name').value = '';
+    document.getElementById('modal-emoji-btn').textContent = '🌲';
+    document.getElementById('modal-species-factor').value = '0.5';
+    document.getElementById('modal-species-height').value = '15';
+    app.addingSpeciesFor = null;
+}
+
+function saveNewSpecies() {
+    const nameInput = document.getElementById('modal-species-name');
+    const iconBtn = document.getElementById('modal-emoji-btn');
+    const factorInput = document.getElementById('modal-species-factor');
+    const heightInput = document.getElementById('modal-species-height');
+    
+    const name = nameInput.value.trim();
+    const icon = iconBtn.textContent;
+    const formFactor = parseFloat(factorInput.value);
+    const defaultHeight = parseFloat(heightInput.value);
+    
+    if (!name) {
+        showNotification('Inserisci un nome per la specie', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!formFactor || formFactor <= 0 || formFactor > 1) {
+        showNotification('Inserisci un fattore di forma valido (0.1 - 1.0)', 'error');
+        factorInput.focus();
+        return;
+    }
+    
+    if (!defaultHeight || defaultHeight <= 0 || defaultHeight > 50) {
+        showNotification('Inserisci un\'altezza valida (0.5 - 50m)', 'error');
+        heightInput.focus();
+        return;
+    }
+    
+    const speciesId = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    
+    // Check if species already exists
+    if (SPECIES[speciesId]) {
+        showNotification('Una specie con questo nome esiste già', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    // Add to current project species
+    const newSpecies = {
+        name: name,
+        icon: icon,
+        formFactor: formFactor,
+        defaultHeight: defaultHeight
+    };
+    
+    SPECIES[speciesId] = newSpecies;
+    
+    // Update project data
+    if (app.currentProject) {
+        app.currentProject.species = app.currentProject.species || {};
+        app.currentProject.species[speciesId] = newSpecies;
+        saveProjects();
+    }
+    
+    // Refresh species buttons
+    generateSpeciesButtons();
+    
+    hideSpeciesModal();
+    showNotification(`Specie "${name}" aggiunta al progetto`, 'success');
+}
+
+function generateSpeciesButtons() {
+    if (!app.currentProject || !app.currentProject.species) return;
+    
+    // Generate sample species buttons
+    const sampleContainer = document.getElementById('sample-species-buttons');
+    sampleContainer.innerHTML = '';
+    
+    Object.entries(app.currentProject.species).forEach(([id, species]) => {
+        const button = document.createElement('button');
+        button.className = 'species-btn';
+        button.dataset.species = id;
+        button.textContent = `${species.icon} ${species.name}`;
+        sampleContainer.appendChild(button);
+    });
+    
+    // Generate inventory species buttons
+    const inventoryContainer = document.getElementById('inventory-species-buttons');
+    inventoryContainer.innerHTML = '';
+    
+    Object.entries(app.currentProject.species).forEach(([id, species]) => {
+        const button = document.createElement('button');
+        button.className = 'species-btn';
+        button.dataset.species = id;
+        button.textContent = `${species.icon} ${species.name}`;
+        inventoryContainer.appendChild(button);
+    });
+    
+    // Reattach event listeners
+    setupSpeciesEventListeners();
+}
+
+function setupSpeciesEventListeners() {
+    // Species buttons - Sample
+    document.querySelectorAll('#sample-species-buttons .species-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectSpecies('sample', btn.dataset.species);
+        });
+    });
+
+    // Species buttons - Inventory
+    document.querySelectorAll('#inventory-species-buttons .species-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectSpecies('inventory', btn.dataset.species);
+        });
+    });
+}
+
+// Species Management Functions
+let currentModifyingSpecies = null;
+
+function showSpeciesManagementModal(mode) {
+    if (!app.currentProject || !SPECIES || Object.keys(SPECIES).length === 0) {
+        showNotification('Nessuna specie disponibile nel progetto', 'info');
+        return;
+    }
+    
+    const modal = document.getElementById('species-management-modal');
+    const title = document.getElementById('management-modal-title');
+    
+    if (mode === 'delete') {
+        title.textContent = 'Elimina Specie';
+    } else if (mode === 'modify') {
+        title.textContent = 'Modifica Specie';
+    }
+    
+    populateSpeciesManagementList(mode);
+    modal.style.display = 'flex';
+}
+
+function populateSpeciesManagementList(mode) {
+    const container = document.getElementById('species-list-container');
+    
+    if (!SPECIES || Object.keys(SPECIES).length === 0) {
+        container.innerHTML = '<p class="empty">Nessuna specie disponibile nel progetto</p>';
+        return;
+    }
+    
+    container.innerHTML = Object.entries(SPECIES).map(([id, species]) => `
+        <div class="species-management-item">
+            <div class="species-management-info">
+                <div class="species-management-name">${species.icon} ${species.name}</div>
+                <div class="species-management-details">
+                    ID: ${id} • Fattore: ${species.formFactor} • Altezza: ${species.defaultHeight || 'N/A'}m
+                </div>
+            </div>
+            <div class="species-management-actions">
+                ${mode === 'delete' ? `
+                    <button class="species-action-btn delete" onclick="confirmDeleteSpecies('${id}')" title="Elimina specie">
+                        🗑️
+                    </button>
+                ` : `
+                    <button class="species-action-btn modify" onclick="startModifySpecies('${id}')" title="Modifica specie">
+                        ✏️
+                    </button>
+                `}
+            </div>
+        </div>
+    `).join('');
+}
+
+function hideSpeciesManagementModal() {
+    document.getElementById('species-management-modal').style.display = 'none';
+}
+
+function confirmDeleteSpecies(speciesId) {
+    const species = SPECIES[speciesId];
+    if (!species) return;
+    
+    // Check if species is used in any trees
+    const usedInSample = app.sampleTrees.some(tree => tree.species === speciesId);
+    const usedInInventory = app.inventoryTrees.some(tree => tree.species === speciesId);
+    
+    let confirmMessage = `Eliminare la specie "${species.name}"?`;
+    
+    if (usedInSample || usedInInventory) {
+        const sampleCount = app.sampleTrees.filter(tree => tree.species === speciesId).length;
+        const inventoryCount = app.inventoryTrees.filter(tree => tree.species === speciesId).length;
+        
+        confirmMessage += `\\n\\nATTENZIONE: Questa specie è utilizzata in:`;
+        if (sampleCount > 0) confirmMessage += `\\n- ${sampleCount} piante di saggio`;
+        if (inventoryCount > 0) confirmMessage += `\\n- ${inventoryCount} piante di piedilista`;
+        confirmMessage += `\\n\\nTutti i dati relativi a questa specie verranno eliminati!`;
+    }
+    
+    if (!confirm(confirmMessage)) return;
+    
+    deleteSpeciesFromProject(speciesId);
+}
+
+function deleteSpeciesFromProject(speciesId) {
+    const species = SPECIES[speciesId];
+    if (!species) return;
+    
+    // Remove species from SPECIES object
+    delete SPECIES[speciesId];
+    
+    // Remove all trees of this species from sampleTrees
+    app.sampleTrees = app.sampleTrees.filter(tree => tree.species !== speciesId);
+    
+    // Remove all trees of this species from inventoryTrees
+    app.inventoryTrees = app.inventoryTrees.filter(tree => tree.species !== speciesId);
+    
+    // Remove height averages for this species
+    if (app.heightAverages[speciesId]) {
+        delete app.heightAverages[speciesId];
+    }
+    
+    // Clear current selections if they match deleted species
+    if (app.selectedSpeciesSample === speciesId) {
+        app.selectedSpeciesSample = null;
+    }
+    if (app.selectedSpeciesInventory === speciesId) {
+        app.selectedSpeciesInventory = null;
+    }
+    
+    // Update project data
+    saveProjects();
+    
+    // Refresh UI
+    generateSpeciesButtons();
+    updateUI();
+    
+    // Close modal and show confirmation
+    hideSpeciesManagementModal();
+    showNotification(`Specie "${species.name}" eliminata dal progetto`, 'success');
+}
+
+function startModifySpecies(speciesId) {
+    const species = SPECIES[speciesId];
+    if (!species) return;
+    
+    currentModifyingSpecies = speciesId;
+    
+    // Populate modify modal with current data
+    document.getElementById('modify-species-name').value = species.name;
+    document.getElementById('modify-emoji-btn').textContent = species.icon;
+    document.getElementById('modify-species-factor').value = species.formFactor;
+    document.getElementById('modify-species-height').value = species.defaultHeight || 15;
+    
+    // Hide management modal and show modify modal
+    hideSpeciesManagementModal();
+    document.getElementById('modify-species-modal').style.display = 'flex';
+    document.getElementById('modify-species-name').focus();
+}
+
+function hideModifySpeciesModal() {
+    document.getElementById('modify-species-modal').style.display = 'none';
+    document.getElementById('modify-species-name').value = '';
+    document.getElementById('modify-emoji-btn').textContent = '🌲';
+    document.getElementById('modify-species-factor').value = '0.5';
+    document.getElementById('modify-species-height').value = '15';
+    currentModifyingSpecies = null;
+}
+
+function saveModifiedSpecies() {
+    if (!currentModifyingSpecies) return;
+    
+    const nameInput = document.getElementById('modify-species-name');
+    const iconBtn = document.getElementById('modify-emoji-btn');
+    const factorInput = document.getElementById('modify-species-factor');
+    const heightInput = document.getElementById('modify-species-height');
+    
+    const newName = nameInput.value.trim();
+    const newIcon = iconBtn.textContent;
+    const newFormFactor = parseFloat(factorInput.value);
+    const newDefaultHeight = parseFloat(heightInput.value);
+    
+    if (!newName) {
+        showNotification('Inserisci un nome per la specie', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!newFormFactor || newFormFactor <= 0 || newFormFactor > 1) {
+        showNotification('Inserisci un fattore di forma valido (0.1 - 1.0)', 'error');
+        factorInput.focus();
+        return;
+    }
+    
+    if (!newDefaultHeight || newDefaultHeight <= 0 || newDefaultHeight > 50) {
+        showNotification('Inserisci un\'altezza valida (0.5 - 50m)', 'error');
+        heightInput.focus();
+        return;
+    }
+    
+    const newSpeciesId = newName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const oldSpecies = SPECIES[currentModifyingSpecies];
+    
+    // Check if new name creates a different ID and if it conflicts
+    if (newSpeciesId !== currentModifyingSpecies && SPECIES[newSpeciesId]) {
+        showNotification('Una specie con questo nome esiste già', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    // Update species data
+    const updatedSpecies = {
+        name: newName,
+        icon: newIcon,
+        formFactor: newFormFactor,
+        defaultHeight: newDefaultHeight
+    };
+    
+    // If ID changed, we need to update all references
+    if (newSpeciesId !== currentModifyingSpecies) {
+        // Add new species
+        SPECIES[newSpeciesId] = updatedSpecies;
+        
+        // Remove old species
+        delete SPECIES[currentModifyingSpecies];
+        
+        // Update all tree references
+        app.sampleTrees.forEach(tree => {
+            if (tree.species === currentModifyingSpecies) {
+                tree.species = newSpeciesId;
+            }
+        });
+        
+        app.inventoryTrees.forEach(tree => {
+            if (tree.species === currentModifyingSpecies) {
+                tree.species = newSpeciesId;
+            }
+        });
+        
+        // Update height averages
+        if (app.heightAverages[currentModifyingSpecies]) {
+            app.heightAverages[newSpeciesId] = app.heightAverages[currentModifyingSpecies];
+            delete app.heightAverages[currentModifyingSpecies];
+        }
+        
+        // Update current selections
+        if (app.selectedSpeciesSample === currentModifyingSpecies) {
+            app.selectedSpeciesSample = newSpeciesId;
+        }
+        if (app.selectedSpeciesInventory === currentModifyingSpecies) {
+            app.selectedSpeciesInventory = newSpeciesId;
+        }
+    } else {
+        // Just update the species data
+        SPECIES[currentModifyingSpecies] = updatedSpecies;
+    }
+    
+    // Save and refresh
+    saveProjects();
+    generateSpeciesButtons();
+    updateUI();
+    
+    hideModifySpeciesModal();
+    showNotification(`Specie aggiornata: "${newName}"`, 'success');
+}
+
+// Custom Diameter Functions
+let currentDiameterType = null;
+
+function showCustomDiameterModal(type) {
+    currentDiameterType = type;
+    document.getElementById('custom-diameter-modal').style.display = 'flex';
+    document.getElementById('custom-diameter-input').focus();
+}
+
+function hideCustomDiameterModal() {
+    document.getElementById('custom-diameter-modal').style.display = 'none';
+    document.getElementById('custom-diameter-input').value = '';
+    // Don't reset currentDiameterType immediately - it's needed for the callback
+}
+
+function saveCustomDiameter() {
+    const input = document.getElementById('custom-diameter-input');
+    const diameter = parseFloat(input.value);
+    
+    
+    if (!diameter || diameter <= 0) {
+        showNotification('Inserisci un diametro valido', 'error');
+        input.focus();
+        return;
+    }
+    
+    if (diameter <= 60) {
+        showNotification('Per diametri fino a 60cm usa i pulsanti standard', 'error');
+        input.focus();
+        return;
+    }
+    
+    if (diameter > 200) {
+        showNotification('Il diametro massimo consentito è 200cm', 'error');
+        input.focus();
+        return;
+    }
+    
+    hideCustomDiameterModal();
+    
+    // Add a small delay to ensure modal is fully closed
+    setTimeout(() => {
+        if (currentDiameterType === 'sample') {
+            selectDiameter('sample', diameter);
+        } else if (currentDiameterType === 'inventory') {
+            addInventoryTree(diameter);
+        }
+        // Reset the type after processing
+        currentDiameterType = null;
+    }, 100);
+}
+
+// Make functions global for onclick handlers
+window.deleteSampleTree = deleteSampleTree;
+window.deleteInventoryTree = deleteInventoryTree;
+window.loadProject = loadProject;
+window.deleteProject = deleteProject;
+window.showAddSpeciesModal = showAddSpeciesModal;
+window.removeCustomSpecies = removeCustomSpecies;
+window.removeSpeciesFromProject = removeSpeciesFromProject;
+window.showSpeciesManagementModal = showSpeciesManagementModal;
+window.confirmDeleteSpecies = confirmDeleteSpecies;
+window.startModifySpecies = startModifySpecies;
+window.showCustomDiameterModal = showCustomDiameterModal;

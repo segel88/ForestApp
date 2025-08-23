@@ -90,7 +90,7 @@
     },
     {
       "name": "Piedilista",
-      "short_name": "Inventario",
+      "short_name": "Piedilista",
       "description": "Vai direttamente al piedilista",
       "url": "/index.html?tab=inventory",
       "icons": [

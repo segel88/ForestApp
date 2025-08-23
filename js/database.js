@@ -1,461 +1,455 @@
-/* ForestApp PWA - IndexedDB Database Layer */
-console.log('📚 Loading database.js...');
+// Simple Database Layer for ForestApp
+// Uses localStorage for data persistence (can be easily upgraded to IndexedDB later)
 
-class ForestDatabase {
+class ForestDB {
     constructor() {
-        this.dbName = 'ForestAppDB';
-        this.version = 1;
-        this.db = null;
+        this.dbName = 'forestapp';
+        this.version = '1.0';
+        this.init();
     }
 
-    // Initialize database connection
-    async init() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, this.version);
-
-            request.onerror = () => {
-                console.error('❌ Database failed to open');
-                reject(request.error);
-            };
-
-            request.onsuccess = () => {
-                this.db = request.result;
-                console.log('✅ Database opened successfully');
-                resolve(this.db);
-            };
-
-            request.onupgradeneeded = (e) => {
-                console.log('🔧 Database upgrade needed');
-                this.db = e.target.result;
-                this.createTables();
-            };
-        });
+    init() {
+        console.log('🗄️ ForestDB initialized');
+        
+        // Initialize default structure if first time
+        if (!localStorage.getItem(`${this.dbName}-initialized`)) {
+            this.createInitialStructure();
+        }
     }
 
-    // Create database schema
-    createTables() {
-        // Projects table
-        if (!this.db.objectStoreNames.contains('projects')) {
-            const projectStore = this.db.createObjectStore('projects', { 
-                keyPath: 'id', 
-                autoIncrement: true 
-            });
-            projectStore.createIndex('name', 'name', { unique: false });
-            projectStore.createIndex('createdAt', 'createdAt', { unique: false });
-            projectStore.createIndex('status', 'status', { unique: false });
-        }
-
-        // Sample trees table
-        if (!this.db.objectStoreNames.contains('sampleTrees')) {
-            const sampleStore = this.db.createObjectStore('sampleTrees', { 
-                keyPath: 'id', 
-                autoIncrement: true 
-            });
-            sampleStore.createIndex('projectId', 'projectId', { unique: false });
-            sampleStore.createIndex('area', 'area', { unique: false });
-            sampleStore.createIndex('species', 'species', { unique: false });
-            sampleStore.createIndex('timestamp', 'timestamp', { unique: false });
-        }
-
-        // Inventory trees table
-        if (!this.db.objectStoreNames.contains('inventoryTrees')) {
-            const inventoryStore = this.db.createObjectStore('inventoryTrees', { 
-                keyPath: 'id', 
-                autoIncrement: true 
-            });
-            inventoryStore.createIndex('projectId', 'projectId', { unique: false });
-            inventoryStore.createIndex('species', 'species', { unique: false });
-            inventoryStore.createIndex('timestamp', 'timestamp', { unique: false });
-        }
-
-        // Height averages table
-        if (!this.db.objectStoreNames.contains('heightAverages')) {
-            const heightStore = this.db.createObjectStore('heightAverages', { 
-                keyPath: 'id', 
-                autoIncrement: true 
-            });
-            heightStore.createIndex('projectId', 'projectId', { unique: false });
-            heightStore.createIndex('species', 'species', { unique: false });
-        }
-
-        // Settings table
-        if (!this.db.objectStoreNames.contains('settings')) {
-            const settingsStore = this.db.createObjectStore('settings', { 
-                keyPath: 'key' 
-            });
-        }
-
-        console.log('📋 Database tables created');
-    }
-
-    // Generic transaction handler
-    async executeTransaction(storeName, mode, operation) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction([storeName], mode);
-            const store = transaction.objectStore(storeName);
-            
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-            
-            const request = operation(store);
-            
-            if (request) {
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+    createInitialStructure() {
+        const initialData = {
+            projects: [],
+            settings: {
+                operator: 'Operatore',
+                lastProjectId: null,
+                theme: 'light'
+            },
+            metadata: {
+                version: this.version,
+                created: new Date().toISOString(),
+                lastAccess: new Date().toISOString()
             }
-        });
-    }
-
-    // PROJECT OPERATIONS
-    async createProject(projectData) {
-        const project = {
-            name: projectData.name,
-            description: projectData.description || '',
-            operator: projectData.operator,
-            inventoryAreaHa: projectData.inventoryAreaHa || 30.0,
-            location: projectData.location || '',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            status: 'active'
         };
 
-        return this.executeTransaction('projects', 'readwrite', (store) => {
-            return store.add(project);
-        });
-    }
-
-    async getProjects() {
-        return this.executeTransaction('projects', 'readonly', (store) => {
-            return store.getAll();
-        });
-    }
-
-    async getProject(id) {
-        return this.executeTransaction('projects', 'readonly', (store) => {
-            return store.get(id);
-        });
-    }
-
-    async updateProject(id, updates) {
-        const project = await this.getProject(id);
-        if (!project) throw new Error('Project not found');
+        localStorage.setItem(`${this.dbName}-data`, JSON.stringify(initialData));
+        localStorage.setItem(`${this.dbName}-initialized`, 'true');
         
-        const updatedProject = {
-            ...project,
-            ...updates,
-            updatedAt: new Date().toISOString()
-        };
-
-        return this.executeTransaction('projects', 'readwrite', (store) => {
-            return store.put(updatedProject);
-        });
+        console.log('✅ Database structure created');
     }
 
-    async deleteProject(id) {
-        // Delete all related data first
-        await this.deleteSampleTreesByProject(id);
-        await this.deleteInventoryTreesByProject(id);
-        await this.deleteHeightAveragesByProject(id);
-        
-        // Delete project
-        return this.executeTransaction('projects', 'readwrite', (store) => {
-            return store.delete(id);
-        });
-    }
-
-    // SAMPLE TREES OPERATIONS
-    async addSampleTree(projectId, treeData) {
-        const tree = {
-            projectId: projectId,
-            area: treeData.area,
-            species: treeData.species,
-            diameterClass: treeData.diameterClass,
-            height: treeData.height,
-            timestamp: treeData.timestamp || new Date().toISOString(),
-            operator: treeData.operator,
-            gps: treeData.gps || null,
-            synced: false
-        };
-
-        return this.executeTransaction('sampleTrees', 'readwrite', (store) => {
-            return store.add(tree);
-        });
-    }
-
-    async getSampleTrees(projectId, area = null) {
-        return this.executeTransaction('sampleTrees', 'readonly', (store) => {
-            const index = store.index('projectId');
-            return index.getAll(projectId);
-        }).then(trees => {
-            if (area) {
-                return trees.filter(tree => tree.area === area);
-            }
-            return trees;
-        });
-    }
-
-    async deleteSampleTree(id) {
-        return this.executeTransaction('sampleTrees', 'readwrite', (store) => {
-            return store.delete(id);
-        });
-    }
-
-    async deleteSampleTreesByProject(projectId) {
-        const trees = await this.getSampleTrees(projectId);
-        const promises = trees.map(tree => this.deleteSampleTree(tree.id));
-        return Promise.all(promises);
-    }
-
-    // INVENTORY TREES OPERATIONS
-    async addInventoryTree(projectId, treeData) {
-        const tree = {
-            projectId: projectId,
-            species: treeData.species,
-            diameterClass: treeData.diameterClass,
-            timestamp: treeData.timestamp || new Date().toISOString(),
-            operator: treeData.operator,
-            gps: treeData.gps || null,
-            synced: false
-        };
-
-        return this.executeTransaction('inventoryTrees', 'readwrite', (store) => {
-            return store.add(tree);
-        });
-    }
-
-    async getInventoryTrees(projectId) {
-        return this.executeTransaction('inventoryTrees', 'readonly', (store) => {
-            const index = store.index('projectId');
-            return index.getAll(projectId);
-        });
-    }
-
-    async deleteInventoryTree(id) {
-        return this.executeTransaction('inventoryTrees', 'readwrite', (store) => {
-            return store.delete(id);
-        });
-    }
-
-    async deleteInventoryTreesByProject(projectId) {
-        const trees = await this.getInventoryTrees(projectId);
-        const promises = trees.map(tree => this.deleteInventoryTree(tree.id));
-        return Promise.all(promises);
-    }
-
-    // HEIGHT AVERAGES OPERATIONS
-    async saveHeightAverages(projectId, averages) {
-        // Delete existing averages for this project
-        await this.deleteHeightAveragesByProject(projectId);
-        
-        // Add new averages
-        const promises = Object.entries(averages).map(([species, data]) => {
-            const record = {
-                projectId: projectId,
-                species: species,
-                average: data.average,
-                count: data.count,
-                min: data.min,
-                max: data.max,
-                updatedAt: new Date().toISOString()
-            };
-            
-            return this.executeTransaction('heightAverages', 'readwrite', (store) => {
-                return store.add(record);
-            });
-        });
-
-        return Promise.all(promises);
-    }
-
-    async getHeightAverages(projectId) {
-        const records = await this.executeTransaction('heightAverages', 'readonly', (store) => {
-            const index = store.index('projectId');
-            return index.getAll(projectId);
-        });
-
-        // Convert back to object format
-        const averages = {};
-        records.forEach(record => {
-            averages[record.species] = {
-                average: record.average,
-                count: record.count,
-                min: record.min,
-                max: record.max
-            };
-        });
-
-        return averages;
-    }
-
-    async deleteHeightAveragesByProject(projectId) {
-        const records = await this.executeTransaction('heightAverages', 'readonly', (store) => {
-            const index = store.index('projectId');
-            return index.getAll(projectId);
-        });
-
-        const promises = records.map(record => {
-            return this.executeTransaction('heightAverages', 'readwrite', (store) => {
-                return store.delete(record.id);
-            });
-        });
-
-        return Promise.all(promises);
-    }
-
-    // SETTINGS OPERATIONS
-    async getSetting(key, defaultValue = null) {
+    // Get all data
+    getData() {
         try {
-            const result = await this.executeTransaction('settings', 'readonly', (store) => {
-                return store.get(key);
-            });
-            return result ? result.value : defaultValue;
+            const data = localStorage.getItem(`${this.dbName}-data`);
+            return data ? JSON.parse(data) : this.getDefaultData();
         } catch (error) {
-            return defaultValue;
+            console.error('Error reading database:', error);
+            return this.getDefaultData();
         }
     }
 
-    async setSetting(key, value) {
-        const setting = { key, value, updatedAt: new Date().toISOString() };
-        return this.executeTransaction('settings', 'readwrite', (store) => {
-            return store.put(setting);
-        });
+    // Save all data
+    saveData(data) {
+        try {
+            data.metadata.lastAccess = new Date().toISOString();
+            localStorage.setItem(`${this.dbName}-data`, JSON.stringify(data));
+            return true;
+        } catch (error) {
+            console.error('Error saving database:', error);
+            return false;
+        }
     }
 
-    // DATA EXPORT OPERATIONS
-    async exportProject(projectId) {
-        const project = await this.getProject(projectId);
-        const sampleTrees = await this.getSampleTrees(projectId);
-        const inventoryTrees = await this.getInventoryTrees(projectId);
-        const heightAverages = await this.getHeightAverages(projectId);
+    getDefaultData() {
+        return {
+            projects: [],
+            settings: {
+                operator: 'Operatore',
+                lastProjectId: null,
+                theme: 'light'
+            },
+            metadata: {
+                version: this.version,
+                created: new Date().toISOString(),
+                lastAccess: new Date().toISOString()
+            }
+        };
+    }
+
+    // Project operations
+    createProject(projectData) {
+        const data = this.getData();
+        
+        const project = {
+            id: Date.now(),
+            name: projectData.name || 'Nuovo Progetto',
+            description: projectData.description || '',
+            operator: projectData.operator || 'Operatore',
+            location: projectData.location || '',
+            totalArea: projectData.totalArea || 30,
+            created: new Date().toISOString(),
+            modified: new Date().toISOString(),
+            sampleTrees: [],
+            inventoryTrees: [],
+            heightAverages: {},
+            settings: {
+                currentArea: 1,
+                selectedSpeciesSample: null,
+                selectedSpeciesInventory: null
+            }
+        };
+
+        data.projects.push(project);
+        data.settings.lastProjectId = project.id;
+        
+        if (this.saveData(data)) {
+            console.log('✅ Project created:', project.name);
+            return project;
+        }
+        
+        throw new Error('Failed to create project');
+    }
+
+    getProject(projectId) {
+        const data = this.getData();
+        return data.projects.find(p => p.id === projectId);
+    }
+
+    getAllProjects() {
+        const data = this.getData();
+        return data.projects;
+    }
+
+    updateProject(projectId, updates) {
+        const data = this.getData();
+        const projectIndex = data.projects.findIndex(p => p.id === projectId);
+        
+        if (projectIndex === -1) {
+            throw new Error('Project not found');
+        }
+
+        data.projects[projectIndex] = {
+            ...data.projects[projectIndex],
+            ...updates,
+            modified: new Date().toISOString()
+        };
+
+        if (this.saveData(data)) {
+            return data.projects[projectIndex];
+        }
+        
+        throw new Error('Failed to update project');
+    }
+
+    deleteProject(projectId) {
+        const data = this.getData();
+        const projectIndex = data.projects.findIndex(p => p.id === projectId);
+        
+        if (projectIndex === -1) {
+            throw new Error('Project not found');
+        }
+
+        const projectName = data.projects[projectIndex].name;
+        data.projects.splice(projectIndex, 1);
+        
+        // Update last project if it was deleted
+        if (data.settings.lastProjectId === projectId) {
+            data.settings.lastProjectId = data.projects.length > 0 ? data.projects[0].id : null;
+        }
+
+        if (this.saveData(data)) {
+            console.log('✅ Project deleted:', projectName);
+            return true;
+        }
+        
+        throw new Error('Failed to delete project');
+    }
+
+    // Sample trees operations
+    addSampleTree(projectId, treeData) {
+        const data = this.getData();
+        const project = data.projects.find(p => p.id === projectId);
+        
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        const tree = {
+            id: Date.now() + Math.random(),
+            ...treeData,
+            timestamp: new Date().toISOString()
+        };
+
+        project.sampleTrees.push(tree);
+        project.modified = new Date().toISOString();
+
+        if (this.saveData(data)) {
+            console.log('✅ Sample tree added');
+            return tree;
+        }
+        
+        throw new Error('Failed to add sample tree');
+    }
+
+    deleteSampleTree(projectId, treeId) {
+        const data = this.getData();
+        const project = data.projects.find(p => p.id === projectId);
+        
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        const treeIndex = project.sampleTrees.findIndex(t => t.id == treeId);
+        if (treeIndex === -1) {
+            throw new Error('Tree not found');
+        }
+
+        project.sampleTrees.splice(treeIndex, 1);
+        project.modified = new Date().toISOString();
+
+        if (this.saveData(data)) {
+            console.log('✅ Sample tree deleted');
+            return true;
+        }
+        
+        throw new Error('Failed to delete sample tree');
+    }
+
+    // Inventory trees operations
+    addInventoryTree(projectId, treeData) {
+        const data = this.getData();
+        const project = data.projects.find(p => p.id === projectId);
+        
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        const tree = {
+            id: Date.now() + Math.random(),
+            ...treeData,
+            timestamp: new Date().toISOString()
+        };
+
+        project.inventoryTrees.push(tree);
+        project.modified = new Date().toISOString();
+
+        if (this.saveData(data)) {
+            console.log('✅ Inventory tree added');
+            return tree;
+        }
+        
+        throw new Error('Failed to add inventory tree');
+    }
+
+    deleteInventoryTree(projectId, treeId) {
+        const data = this.getData();
+        const project = data.projects.find(p => p.id === projectId);
+        
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        const treeIndex = project.inventoryTrees.findIndex(t => t.id == treeId);
+        if (treeIndex === -1) {
+            throw new Error('Tree not found');
+        }
+
+        project.inventoryTrees.splice(treeIndex, 1);
+        project.modified = new Date().toISOString();
+
+        if (this.saveData(data)) {
+            console.log('✅ Inventory tree deleted');
+            return true;
+        }
+        
+        throw new Error('Failed to delete inventory tree');
+    }
+
+    clearInventory(projectId) {
+        const data = this.getData();
+        const project = data.projects.find(p => p.id === projectId);
+        
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        project.inventoryTrees = [];
+        project.modified = new Date().toISOString();
+
+        if (this.saveData(data)) {
+            console.log('✅ Inventory cleared');
+            return true;
+        }
+        
+        throw new Error('Failed to clear inventory');
+    }
+
+    // Height averages operations
+    updateHeightAverages(projectId, averages) {
+        const data = this.getData();
+        const project = data.projects.find(p => p.id === projectId);
+        
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        project.heightAverages = averages;
+        project.modified = new Date().toISOString();
+
+        if (this.saveData(data)) {
+            console.log('✅ Height averages updated');
+            return true;
+        }
+        
+        throw new Error('Failed to update height averages');
+    }
+
+    // Settings operations
+    getSetting(key) {
+        const data = this.getData();
+        return data.settings[key];
+    }
+
+    setSetting(key, value) {
+        const data = this.getData();
+        data.settings[key] = value;
+        
+        if (this.saveData(data)) {
+            console.log(`✅ Setting updated: ${key} = ${value}`);
+            return true;
+        }
+        
+        throw new Error('Failed to update setting');
+    }
+
+    // Export/Import operations
+    exportProject(projectId) {
+        const project = this.getProject(projectId);
+        if (!project) {
+            throw new Error('Project not found');
+        }
 
         return {
-            project,
-            sampleTrees,
-            inventoryTrees,
-            heightAverages,
-            exportedAt: new Date().toISOString(),
-            version: '2.0.0'
+            formatVersion: '1.0',
+            exportDate: new Date().toISOString(),
+            project: project
         };
     }
 
-    async exportAllData() {
-        const projects = await this.getProjects();
-        const allData = {
-            projects: [],
-            exportedAt: new Date().toISOString(),
-            version: '2.0.0'
+    importProject(projectData) {
+        const data = this.getData();
+        
+        // Create new project with imported data
+        const project = {
+            ...projectData.project,
+            id: Date.now(), // New ID
+            imported: new Date().toISOString(),
+            modified: new Date().toISOString()
         };
 
-        for (const project of projects) {
-            const projectData = await this.exportProject(project.id);
-            allData.projects.push(projectData);
+        data.projects.push(project);
+        
+        if (this.saveData(data)) {
+            console.log('✅ Project imported:', project.name);
+            return project;
         }
-
-        return allData;
+        
+        throw new Error('Failed to import project');
     }
 
-    // DATA IMPORT OPERATIONS
-    async importProject(projectData) {
-        try {
-            // Create project (without ID to get new ID)
-            const projectToImport = { ...projectData.project };
-            delete projectToImport.id;
-            projectToImport.name = `${projectToImport.name} (Imported)`;
-            
-            const newProjectId = await this.createProject(projectToImport);
-
-            // Import sample trees
-            for (const tree of projectData.sampleTrees) {
-                const treeToImport = { ...tree };
-                delete treeToImport.id;
-                await this.addSampleTree(newProjectId, treeToImport);
-            }
-
-            // Import inventory trees
-            for (const tree of projectData.inventoryTrees) {
-                const treeToImport = { ...tree };
-                delete treeToImport.id;
-                await this.addInventoryTree(newProjectId, treeToImport);
-            }
-
-            // Import height averages
-            if (projectData.heightAverages && Object.keys(projectData.heightAverages).length > 0) {
-                await this.saveHeightAverages(newProjectId, projectData.heightAverages);
-            }
-
-            return newProjectId;
-        } catch (error) {
-            console.error('❌ Import failed:', error);
-            throw error;
-        }
+    // Backup operations
+    createBackup() {
+        const data = this.getData();
+        return {
+            backup: true,
+            version: this.version,
+            timestamp: new Date().toISOString(),
+            data: data
+        };
     }
 
-    // DATABASE STATISTICS
-    async getDatabaseStats() {
-        const projects = await this.getProjects();
+    restoreBackup(backupData) {
+        if (!backupData.backup || !backupData.data) {
+            throw new Error('Invalid backup data');
+        }
+
+        if (this.saveData(backupData.data)) {
+            console.log('✅ Backup restored');
+            return true;
+        }
+        
+        throw new Error('Failed to restore backup');
+    }
+
+    // Statistics
+    getStats() {
+        const data = this.getData();
+        
+        let totalProjects = data.projects.length;
         let totalSampleTrees = 0;
         let totalInventoryTrees = 0;
+        let totalArea = 0;
 
-        for (const project of projects) {
-            const sampleTrees = await this.getSampleTrees(project.id);
-            const inventoryTrees = await this.getInventoryTrees(project.id);
-            totalSampleTrees += sampleTrees.length;
-            totalInventoryTrees += inventoryTrees.length;
-        }
-
-        return {
-            projects: projects.length,
-            sampleTrees: totalSampleTrees,
-            inventoryTrees: totalInventoryTrees,
-            lastUpdate: new Date().toISOString()
-        };
-    }
-
-    // SYNC STATUS OPERATIONS
-    async markTreesAsSynced(projectId, treeIds, type = 'inventory') {
-        const storeName = type === 'sample' ? 'sampleTrees' : 'inventoryTrees';
-        
-        const promises = treeIds.map(id => {
-            return this.executeTransaction(storeName, 'readwrite', (store) => {
-                return store.get(id).then(tree => {
-                    if (tree) {
-                        tree.synced = true;
-                        tree.syncedAt = new Date().toISOString();
-                        return store.put(tree);
-                    }
-                });
-            });
+        data.projects.forEach(project => {
+            totalSampleTrees += project.sampleTrees.length;
+            totalInventoryTrees += project.inventoryTrees.length;
+            totalArea += project.totalArea;
         });
 
-        return Promise.all(promises);
-    }
-
-    async getUnsyncedTrees(projectId) {
-        const sampleTrees = await this.getSampleTrees(projectId);
-        const inventoryTrees = await this.getInventoryTrees(projectId);
-
         return {
-            sampleTrees: sampleTrees.filter(tree => !tree.synced),
-            inventoryTrees: inventoryTrees.filter(tree => !tree.synced)
+            totalProjects,
+            totalSampleTrees,
+            totalInventoryTrees,
+            totalArea,
+            lastAccess: data.metadata.lastAccess,
+            databaseSize: this.getDatabaseSize()
         };
     }
-}
 
-// Global database instance
-let forestDB = null;
-
-// Initialize database
-async function initializeDatabase() {
-    if (!forestDB) {
-        forestDB = new ForestDatabase();
-        await forestDB.init();
+    getDatabaseSize() {
+        try {
+            const data = localStorage.getItem(`${this.dbName}-data`);
+            return data ? (data.length / 1024).toFixed(2) + ' KB' : '0 KB';
+        } catch (error) {
+            return 'Unknown';
+        }
     }
-    return forestDB;
+
+    // Maintenance
+    cleanup() {
+        // Remove old projects (older than 1 year) if there are too many
+        const data = this.getData();
+        
+        if (data.projects.length > 50) {
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            
+            const activeProjects = data.projects.filter(project => 
+                new Date(project.modified) > oneYearAgo
+            );
+            
+            if (activeProjects.length < data.projects.length) {
+                data.projects = activeProjects;
+                this.saveData(data);
+                console.log('✅ Database cleanup completed');
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    // Clear all data
+    clearAll() {
+        localStorage.removeItem(`${this.dbName}-data`);
+        localStorage.removeItem(`${this.dbName}-initialized`);
+        this.createInitialStructure();
+        console.log('✅ All data cleared');
+        return true;
+    }
 }
 
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ForestDatabase, initializeDatabase };
-}
-
-console.log('🗄️ ForestApp Database layer loaded successfully!');
+// Global instance
+window.forestDB = new ForestDB();
+console.log('✅ ForestDB ready');
